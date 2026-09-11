@@ -1,0 +1,2 @@
+# lupa 2.x bundles LuaJIT 2.1 (lupa.luajit21), the Lua Ashita runs. Tested with 2.8.
+lupa>=2.0,<3
