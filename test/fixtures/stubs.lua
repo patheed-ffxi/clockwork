@@ -448,8 +448,16 @@ AshitaCore = {
             }) end,
             GetParty  = function() return permissive({
                 GetMemberTargetIndex = function() return 1 end,
-                GetMemberName = function() return world.charName or 'Harness' end,
-                GetMemberHP = function() return world.hp or 0 end,
+                -- slot 0 is the master; slots 1-5 answer from world.partyNames
+                -- and world.partyHp (slot -> name, slot -> current HP)
+                GetMemberName = function(_, i)
+                    if (i or 0) == 0 then return world.charName or 'Harness' end
+                    return (world.partyNames or {})[i] or ('Member' .. i)
+                end,
+                GetMemberHP = function(_, i)
+                    if (i or 0) == 0 then return world.hp or 0 end
+                    return (world.partyHp or {})[i] or 0
+                end,
                 -- slots 1-5 for LSB's Soulsoother + Light party heal. world.party
                 -- is a sparse map of slot -> HP%; an absent slot is not in the party.
                 GetMemberIsActive = function(_, i)

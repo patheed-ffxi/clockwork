@@ -65,7 +65,7 @@ local SPELLS = setmetatable({}, { __index = function(_, id)
     return nil
 end })
 for k, v in pairs({
-    [1] = 'Cure', [2] = 'Cure II', [3] = 'Cure III', [4] = 'Cure IV', [14] = 'Poisona',
+    [1] = 'Cure', [2] = 'Cure II', [3] = 'Cure III', [4] = 'Cure IV', [5] = 'Cure V', [14] = 'Poisona',
     [16] = 'Blindna', [23] = 'Dia', [24] = 'Dia II', [43] = 'Protect', [44] = 'Protect II',
     [45] = 'Protect III', [46] = 'Protect IV',
     [48] = 'Shell', [50] = 'Shell III', [51] = 'Shell IV', [54] = 'Stoneskin', [56] = 'Slow', [57] = 'Haste', [58] = 'Paralyze',

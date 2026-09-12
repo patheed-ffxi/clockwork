@@ -525,23 +525,34 @@ local function gather(head, counts)
         mhp  = AshitaCore:GetMemoryManager():GetParty():GetMemberHP(0) or 0
         mmax = player():GetHPMax() or 0
     end)
-    -- LSB's third heal target reads the party's HP%. GetMemberHPPercent is
-    -- the direct answer for slots 1-5 (slot 0's percent is derived from
-    -- HP/maxHP above, because IPlayer knows the master's maximum and
-    -- IParty does not).
-    local partyLow = nil
+    -- The party, slots 1-5: the heal rung's third target and the enhance
+    -- rung's party arm. GetMemberHPPercent is the direct answer for the
+    -- percent (slot 0's is derived from HP/maxHP above, because IPlayer knows
+    -- the master's maximum and IParty does not); the member's current HP
+    -- beside it gives the missing HP a Cure tier is chosen from. A member at
+    -- 0% is dead or out of the zone, and neither is a target. `fx` is the
+    -- member's buffs off the last 0x076, nil until one has named them.
+    local party, partyLow = {}, nil
     safe(function()
         local pty = AshitaCore:GetMemoryManager():GetParty()
         for i = 1, 5 do
             local active = pty:GetMemberIsActive(i)
             if active ~= nil and active ~= 0 and active ~= false then
                 local p = pty:GetMemberHPPercent(i)
-                if p ~= nil and p > 0 and (partyLow == nil or p < partyLow) then
-                    partyLow = p
+                if p ~= nil and p > 0 then
+                    local sid = pty:GetMemberServerId(i) or 0
+                    party[#party + 1] = { sid = sid, hpp = p, hp = pty:GetMemberHP(i) or 0,
+                                          name = pty:GetMemberName(i) or ('member ' .. i),
+                                          fx = tm.partyBuffs[sid] }
+                    if partyLow == nil or p < partyLow then partyLow = p end
                 end
             end
         end
     end)
+    local masterHpp = (mmax > 0) and math.floor(mhp * 100 / mmax) or 100
+    -- for the cast record, which the packet thread writes and which cannot
+    -- read memory itself
+    tm.partyNow, tm.youHpp = party, masterHpp
     local icons = safe(function() return player():GetStatusIcons() end, nil) or {}
     local master, masterList = {}, {}
     for i = 1, 32 do
@@ -583,7 +594,7 @@ local function gather(head, counts)
     publishMp(seen, mpp)
     return {
         head = head, counts = counts,
-        masterHpp = (mmax > 0) and math.floor(mhp * 100 / mmax) or 100,
+        masterHpp = masterHpp,
         masterMissing = math.max(0, mmax - mhp),
         petHpp = hpp, petMpp = mpp,
         -- raw MP for the nuke tier. auto044.mp is only as fresh as the last
@@ -607,7 +618,7 @@ local function gather(head, counts)
         petKnows = function(e) return tm.petKnown[e] == true end,
         petList = petList,
         mobHas = targetHas, mobDispelable = dispelable, mobHpp = mobHpp,
-        partyLow = partyLow,
+        party = party, partyLow = partyLow,
         -- APPROXIMATION: LSB's isEngaged is "the master is on THIS mob's
         -- enmity list and within 20 yalms", recomputed every tick. petTarget
         -- is the only engagement signal the client has, and timersClear
@@ -645,36 +656,53 @@ end
 -- ambiguous branch the tier comes from the MASTER's missing HP - the
 -- automaton's would give a different Cure - which is half of why that
 -- pick is flagged uncertain.
+-- The party arm departs from LSB (the assumptions doc, section 3). Upstream's
+-- third target (automaton_controller.cpp tryHeal) needs a Light maneuver and
+-- a master who does not need the cure; this model assumes a Soulsoother needs
+-- neither. With no Light up it still cures a member at or under the
+-- threshold, and a member lower than a master who also qualifies may take the
+-- cure from them. Upstream picks the member by enmity, which is unreadable,
+-- so the model names the LOWEST member, takes the tier from that member's own
+-- missing HP, and flags the pick either way. An automaton at or under half
+-- keeps the plain branches.
+local function cureTier(missing)
+    return (missing > 850 and 6) or (missing > 600 and 5) or (missing > 350 and 4)
+        or (missing > 190 and 3) or (missing > 120 and 2) or 1
+end
 local function tryHeal(ctx, usable)
     local light = math.min(ctx.counts.Light or 0, 3)
     local thr = math.min(90, math.max(30, ({ [0] = 30, 40, 50, 75 })[light] + ctx.gauge))
     local master, pet = ctx.masterHpp <= thr, ctx.petHpp <= 50
-    if not master and not pet then
-        -- LSB's third target: with any Light maneuver, a Soulsoother head
-        -- and a party, it cures the highest-ENMITY member at or under the
-        -- same threshold (automaton_controller.cpp tryHeal). Neither enmity
-        -- nor a member's maximum HP is readable, so WHICH member - and
-        -- therefore which tier - cannot be known; that a cure is coming
-        -- can. Name the floor and flag it, rather than fall through and
-        -- predict the next rung's spell in plain text.
-        if light > 0 and ctx.head == 5 and ctx.partyLow ~= nil
-           and ctx.partyLow <= thr and usable(1) then
-            return { id = 1, rung = 'heal', uncertain = true,
-                     why = ('heal · a party member at %d%% (enmity picks who, and the tier)')
-                           :format(ctx.partyLow) }
+    local member = nil
+    if ctx.head == 5 and not pet then
+        for _, m in ipairs(ctx.party or {}) do
+            if m.hpp <= thr and (member == nil or m.hpp < member.hpp) then member = m end
         end
+    end
+    local why, missing, uncertain
+    if member ~= nil and (not master or member.hpp < ctx.masterHpp) then
+        -- HP beside HP% gives the member's maximum; with the HP unread the
+        -- tier stays at its floor, which the flag already covers
+        missing = (member.hp > 0) and math.floor(member.hp * (100 - member.hpp) / member.hpp) or 0
+        why = master and ('heal · %s at %d%% · or you at %d%%'):format(member.name, member.hpp, ctx.masterHpp)
+                      or ('heal · %s at %d%% (enmity picks who)'):format(member.name, member.hpp)
+        uncertain = true
+    elseif master or pet then
+        local who = 'you'
+        missing, uncertain = ctx.masterMissing, false
+        if master and pet then who, uncertain = 'you or automaton', true
+        elseif pet then who, missing = 'automaton', ctx.petMissing end
+        why = ('heal · %s at %d%%'):format(who, master and ctx.masterHpp or ctx.petHpp)
+        if member ~= nil then
+            why, uncertain = ('%s · or %s at %d%%'):format(why, member.name, member.hpp), true
+        end
+    else
         return nil
     end
-    local who, missing, uncertain = 'you', ctx.masterMissing, false
-    if master and pet then who, uncertain = 'you or automaton', true
-    elseif pet then who, missing = 'automaton', ctx.petMissing end
-    local tier = (missing > 850 and 6) or (missing > 600 and 5) or (missing > 350 and 4)
-              or (missing > 190 and 3) or (missing > 120 and 2) or 1
-    for id = tier, 1, -1 do   -- Cure .. Cure VI are spells 1..6
+    for id = cureTier(missing), 1, -1 do   -- Cure .. Cure VI are spells 1..6
         if usable(id) then
             return { id = id, rung = 'heal', uncertain = uncertain,
-                     mode = (light > 0) and 'maneuver' or 'default',
-                     why = ('heal · %s at %d%%'):format(who, master and ctx.masterHpp or ctx.petHpp) }
+                     mode = (light > 0) and 'maneuver' or 'default', why = why }
         end
     end
     return nil
@@ -869,6 +897,30 @@ local function tryEnhance(ctx, usable)
         -- unaffected and the rung simply starts there. Seen on a
         -- Soulsoother: Deploy onto an unengaged mob, and the server casts
         -- Protect, not Regen.
+    elseif #(ctx.party or {}) > 0 then
+        -- In a party the Regen candidates are the master, the automaton and
+        -- every member on the mob's hate list (LSB TryEnhance's party loop),
+        -- and the single highest-enmity one is the target. Enmity is
+        -- unreadable, so only the two ends are certain: a Regen comes when
+        -- nobody has one and never when everybody does. Anything between -
+        -- and a member no 0x076 has named counts as either - may go either
+        -- way, and is hedged as the solo case is.
+        local lack, have = not (mHas and pHas), mHas or pHas
+        for _, mem in ipairs(ctx.party) do
+            if mem.fx == nil then lack, have = true, true
+            elseif mem.fx[42] then have = true
+            else lack = true end
+        end
+        if lack and not have then
+            for _, id in ipairs({ 111, 110, 108 }) do
+                if usable(id) then
+                    return { id = id, rung = 'enhance', mode = 'default', uncertain = true,
+                             why = 'enhance · no Regen on anyone (hate picks who)' }
+                end
+            end
+        elseif lack then
+            hedge = ' · or a Regen, if hate is on someone without one'
+        end
     elseif not mHas and not pHas then
         for _, id in ipairs({ 111, 110, 108 }) do
             if usable(id) then
@@ -911,13 +963,28 @@ local function tryEnhance(ctx, usable)
         -- So wait for a reading. The ladder simply moves down, and one
         -- arrives quickly: every landing, every wear-off and every enhance
         -- cast above the rung is one.
-        local target = nil
+        local target, unsure = nil, nil
         if ctx.engaged and not m(effect) then target = 'you'
-        elseif not masterOnly and ctx.petKnows(effect) and not p(effect) then target = 'automaton' end
+        elseif not masterOnly and ctx.petKnows(effect) then
+            if not p(effect) then target = 'automaton'
+            else
+                -- LSB's party arm: the first member, in party order, on the
+                -- mob's hate list and without it. The hate list is unreadable,
+                -- so a member without it is named and the pick flagged; a
+                -- member whose buffs no 0x076 has named is passed over, not
+                -- guessed at.
+                for _, mem in ipairs(ctx.party or {}) do
+                    if mem.fx ~= nil and not mem.fx[effect] then
+                        target, unsure = mem.name, true
+                        break
+                    end
+                end
+            end
+        end
         if target == nil then return nil end
         for _, id in ipairs(ids) do
             if usable(id) then
-                return { id = id, rung = 'enhance', mode = 'default',
+                return { id = id, rung = 'enhance', mode = 'default', uncertain = unsure,
                          why = ('enhance · no %s on %s'):format(label, target) }
             end
         end

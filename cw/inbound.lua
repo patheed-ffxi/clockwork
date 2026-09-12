@@ -698,6 +698,24 @@ local function onPetSpell(act)
                       -- checked afterwards against a cost that fell inside it
                       mp = tm.mp or -1, mp_hi = tm.mpHi or -1,
                       maxmp = tm.maxmp or -1 }
+        -- Who it is aimed at, and the HP picture it was chosen from. The heal
+        -- and enhance rungs' party arms rest on assumptions (the assumptions
+        -- doc, section 3) and these fields are what test them. The party list
+        -- is gather()'s, published on the render thread: `name hp% hp` per
+        -- member, hp 0 where it was unread.
+        do
+            local t1 = act.targets[1]
+            local tid = (t1 ~= nil) and t1.server_id or 0
+            local target = (tid == snap.self_id and 'you') or (tid == snap.pet_id and 'automaton') or nil
+            local members = {}
+            for _, mem in ipairs(tm.partyNow or {}) do
+                if tid == mem.sid then target = mem.name end
+                members[#members + 1] = ('%s %d%% %d'):format(mem.name, mem.hpp, mem.hp)
+            end
+            rec.target = target or ((tid == tm.petTarget) and 'mob') or 'other'
+            rec.you_hpp = tm.youHpp
+            if #members > 0 then rec.party = table.concat(members, ', ') end
+        end
         -- A prediction that HEDGED and then lost to the very thing it
         -- hedged against was not wrong - it said the window might go to a
         -- Regen, and it did. Counting that as a mispredict overstates the
@@ -716,25 +734,33 @@ local function onPetSpell(act)
         -- real ones - the same reasoning the hedge gets. The record
         -- keeps `expected` and gains `missed_uncertain`, so the rate stays
         -- measurable; only the alarm and the counter go quiet.
-        -- Only an MP-derived one. `uncertain` alone is too broad: a Regen
+        -- Not every one. `uncertain` alone is too broad: a Regen
         -- pick is uncertain about WHOSE it is, not about being a Regen, so
         -- exempting it would answer for a Protect the model got wrong by
-        -- pointing at a target question nobody asked. The MP case is the
-        -- one where the alternative is known exactly.
+        -- pointing at a target question nobody asked. The exempt cases are
+        -- the ones where the alternative is known exactly. An MP-derived
+        -- one: the tier the interval's low end would have chosen.
         local unsure = (s.mpUnsure == true) and s.name ~= rec.name and not hedged
+        -- ...and a flagged heal. Every doubt a heal pick carries is about its
+        -- TARGET - which party member, you or a member, you or the automaton -
+        -- and the tier follows the target's missing HP, so the alternative is
+        -- some other Cure. A different Cure is excused; anything else is not.
+        local cureUnsure = (s.rung == 'heal') and (s.mode == 'uncertain') and (rec.rung == 'heal')
+                           and s.name ~= rec.name and not hedged and not unsure
         tm.casts = tm.casts + 1
-        if s.name ~= rec.name and not hedged and not unsure then
+        if s.name ~= rec.name and not hedged and not unsure and not cureUnsure then
             tm.missed = tm.missed + 1
             flagAnomaly('spell_mispredicted', rec)
         else
             rec.hedged = hedged or nil
-            rec.missed_uncertain = unsure or nil
+            rec.missed_uncertain = (unsure or cureUnsure) or nil
             logEvent('pet_spell', rec)
             if config.debug_predictions then
                 local line = chat.header('clockwork')
                     :append(chat.success(('%s as %s'):format(rec.name,
                                          hedged and 'hedged'
                                          or unsure and 'one of two'
+                                         or cureUnsure and 'a Cure (tier in doubt)'
                                          or 'predicted')))
                 if config.show_reasoning then
                     line = line:append(chat.message(('- %s'):format(
@@ -808,6 +834,32 @@ local function onAction(data)
     end
 end
 
+-- 0x076, the party's buffs - XiPackets world/server/0x0076, the parse HXUI
+-- and XIUI use: five 0x30-byte entries from 0x04, each the member's ServerId,
+-- then at +0x08 a 64-bit field holding two high bits per buff, then at +0x10
+-- the 32 low bytes. The client rebuilds an id as (high << 8) | low and skips
+-- 0xFF with no high bits. The master's own buffs never ride in it. Pure string
+-- ops: safe on the packet thread.
+local function onPartyBuffs(data)
+    local out = {}
+    for i = 0, 4 do
+        local base = 0x04 + 0x30 * i
+        local sid = u32le(data, base)
+        if sid ~= 0 then
+            local fx = {}
+            for j = 0, 31 do
+                local lo = data:byte(base + 0x10 + j + 1)
+                local bits = data:byte(base + 0x08 + math.floor(j / 4) + 1)
+                if lo == nil or bits == nil then break end
+                local hi = math.floor(bits / 4 ^ (j % 4)) % 4
+                if not (lo == 0xFF and hi == 0) then fx[hi * 256 + lo] = true end
+            end
+            out[sid] = fx
+        end
+    end
+    tm.partyBuffs = out
+end
+
 -- packet_in: drops injected packets, then hands each packet we read to its
 -- handler by id.
 local function onPacket(e)
@@ -820,6 +872,8 @@ local function onPacket(e)
         onBattleMessage(e.data)
     elseif e.id == 0x028 then
         onAction(e.data)
+    elseif e.id == 0x076 then
+        onPartyBuffs(e.data)
     end
 end
 
