@@ -133,6 +133,15 @@ do
     check('settings restored a bool', cfg.anomaly_chat, false)
     check('settings restored another bool', cfg.show_reasoning, false)
     check('settings restored an int', cfg.ui_scale, 120)
+    -- the three line switches are on the whitelist too
+    cfg.show_ws, cfg.show_gives, cfg.show_oils = false, false, false
+    api.saveSettings()
+    cfg.show_ws, cfg.show_gives, cfg.show_oils = true, true, true
+    api.loadSettings()
+    check('settings restored show_ws', cfg.show_ws, false)
+    check('settings restored show_gives', cfg.show_gives, false)
+    check('settings restored show_oils', cfg.show_oils, false)
+    cfg.show_ws, cfg.show_gives, cfg.show_oils = true, true, true
 
     -- what the file actually holds: stable order, one key a line, and NOTHING
     -- from the model. A calibration constant in here is the bug this guards.

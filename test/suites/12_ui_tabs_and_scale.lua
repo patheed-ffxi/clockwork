@@ -256,6 +256,16 @@ do
     frame('settings sidebar back')
     check('sidebar toggled back', cfg.sidebar, false)
 
+    -- the three line switches are pills on the tab, each flipping its own key
+    for _, p in ipairs({ { 'weaponskill prediction', 'show_ws' },
+                         { 'what maneuvers give', 'show_gives' },
+                         { 'oil counts', 'show_oils' } }) do
+        clicks[p[1] .. '##cw_set_' .. p[2]] = true
+        frame('settings ' .. p[2])
+        check(p[2] .. ' toggled from the tab', cfg[p[2]], false)
+        cfg[p[2]] = true
+    end
+
     -- Restore defaults, twice - the second click is the one that acts
     cfg.ui_scale = 160
     clicks['Restore defaults##cw_set_defaults'] = true
