@@ -1,11 +1,13 @@
 -- cw/util.lua - the guarded native reads everything else is built on, and the
 -- atomic file write. Publishes tm.swallowed; exports safe, player, the login and
--- job checks, equippedItemId, itemName, equippedThreshold and writeFile, which
--- writes through a temp file that the local replaceFile (MoveFileExA) swaps in.
+-- job checks, equippedItemId, itemName, equippedThreshold, equippedManeuverBonus
+-- and writeFile, which writes through a temp file that the local replaceFile
+-- (MoveFileExA) swaps in.
 local ffi = require('ffi')
 local config = require('cw.config')
 local D  = require('cw.data')
 local OVERLOAD_GEAR, SLOT_HANDS, SLOT_NECK = D.OVERLOAD_GEAR, D.SLOT_HANDS, D.SLOT_NECK
+local MANEUVER_GEAR = D.MANEUVER_GEAR
 local tm = require('cw.state')
 
 -- ============================================================= utilities =
@@ -75,6 +77,12 @@ local function equippedThreshold()
                             + (OVERLOAD_GEAR[equippedItemId(SLOT_NECK)] or 0)
 end
 
+-- MANEUVER_BONUS on the worn hands, read the same two ways as the threshold:
+-- by reconcile as the maneuver resolves, and per frame for the rest.
+local function equippedManeuverBonus()
+    return MANEUVER_GEAR[equippedItemId(SLOT_HANDS)] or 0
+end
+
 -- Put `tmp` where `path` is, in one step. os.rename is C rename(), which on
 -- Windows refuses an existing destination; MoveFileExA with
 -- MOVEFILE_REPLACE_EXISTING (1) is the rename that may replace, and on one
@@ -130,4 +138,5 @@ end
 return { safe = safe, player = player, isLoggedIn = isLoggedIn, atCharacterSelect = atCharacterSelect,
          isPup = isPup, isPupSub = isPupSub,
          equippedItemId = equippedItemId, itemName = itemName, equippedThreshold = equippedThreshold,
+         equippedManeuverBonus = equippedManeuverBonus,
          writeFile = writeFile }

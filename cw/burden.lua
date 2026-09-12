@@ -11,7 +11,7 @@ local SLOT_HANDS, WS_LISTS = D.SLOT_HANDS, D.WS_LISTS
 local tm = require('cw.state')
 local U  = require('cw.util')
 local safe, player, equippedItemId, itemName = U.safe, U.player, U.equippedItemId, U.itemName
-local equippedThreshold = U.equippedThreshold
+local equippedThreshold, equippedManeuverBonus = U.equippedThreshold, U.equippedManeuverBonus
 local L  = require('cw.log')
 local logEvent, flagAnomaly = L.logEvent, L.flagAnomaly
 local R  = require('cw.reading')
@@ -21,6 +21,7 @@ local burden, cost, samples, ids = tm.burden, tm.cost, tm.samples, tm.ids
 local snap, costSource, costDispute, burdenVerified = tm.snap, tm.costSource, tm.costDispute, tm.burdenVerified
 local castThresh, castStat, seededBy, lastReconcile = tm.castThresh, tm.castStat, tm.seededBy, tm.lastReconcile
 local waterSince = tm.waterSince
+local castBonus = tm.castBonus
 
 -- Your side of the stat check, read from memory now.
 local function myStat(el)
@@ -100,7 +101,7 @@ tm.dropLearnedCosts = function(hard)
     for _, el in ipairs(ELEMENTS) do
         if costSource[el] == 'observed' then costSource[el] = nil end
         costDispute[el] = nil
-        if hard then castStat[el], castThresh[el] = nil, nil end
+        if hard then castStat[el], castThresh[el], castBonus[el] = nil, nil, nil end
     end
 end
 
@@ -262,6 +263,7 @@ local function reconcile(el, actualPct, overloaded)
     burden[el] = trueBurden
     burdenVerified[el] = not censored
     castThresh[el] = thresh
+    castBonus[el]  = equippedManeuverBonus()   -- the hands the server just read, like thresh
     samples[#samples + 1] = { element = el, predicted = predicted, actual = actualPct, err = err }
     while #samples > config.max_samples do table.remove(samples, 1) end
 

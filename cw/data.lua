@@ -149,6 +149,9 @@ local PLAYER_STAT_INDEX = { STR=0, DEX=1, VIT=2, AGI=3, INT=4, MND=5, CHR=6 }
 -- BG-wiki agrees on the Dastanas: "increasing the overload threshold by 5".
 local OVERLOAD_GEAR = { [14930] = 5, [15030] = 5,   -- Puppetry Dastanas, +1
                         [16281] = 5, [16282] = 5 }  -- Buffoon's Collar, +1
+-- MANEUVER_BONUS gear, LSB item_mods.sql mod 504 - era pieces only. Added to
+-- the stat each maneuver grants (automaton.lua onUseManeuver).
+local MANEUVER_GEAR = { [14930] = 1, [15030] = 1 }  -- Puppetry Dastanas, +1
 -- 0-based equipment slots (luashitacast constants.lua lists them 1-based).
 local SLOT_HANDS, SLOT_NECK = 6, 9
 
@@ -246,5 +249,6 @@ return { ABILITY_ICON = ABILITY_ICON, ELEMENTS = ELEMENTS, MSG_OVERLOAD_CHANCE =
          MOBSKILL_SC = MOBSKILL_SC, WS_SC = WS_SC, AVATAR_SC = AVATAR_SC,
          MANEUVER_STAT = MANEUVER_STAT, PLAYER_STAT_INDEX = PLAYER_STAT_INDEX,
          OVERLOAD_GEAR = OVERLOAD_GEAR, SLOT_HANDS = SLOT_HANDS, SLOT_NECK = SLOT_NECK,
+         MANEUVER_GEAR = MANEUVER_GEAR,
          ATTACH_OFFSET = ATTACH_OFFSET, EQUIP_OFFSET = EQUIP_OFFSET, PUPPET_CAP = PUPPET_CAP,
          OIL_IDS = OIL_IDS, WS_LISTS = WS_LISTS }

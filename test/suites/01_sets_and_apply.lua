@@ -241,6 +241,23 @@ do
     -- Dark's effect script is empty - MANEUVER_STAT's Dark = MP is the burden
     -- check's stat, not something the automaton is given.
     check('a Dark maneuver grants nothing', #api.buffSummary({}, { Dark = 2 }, {}), 0)
+    -- The level part is floored, not rounded: +3 at 30 and still +3 at 40,
+    -- +5 at 74 bare-handed. Rounding would put 40 at +4.
+    for _, c in ipairs({ { 74, 5 }, { 40, 3 }, { 30, 3 } }) do
+        world.mainlvl = c[1]
+        check(('Fire states STR +%d at level %d'):format(c[2], c[1]),
+              rowOf(api.buffSummary({}, { Fire = 1 }, {}), 'STR'), c[2])
+    end
+    world.mainlvl = 75
+    -- Maneuver Bonus: before an element has resolved, the hands worn now
+    -- stand in - the AF gloves are +1, so +7 at 75.
+    world.gear = { [6] = 14930 }   -- Puppetry Dastanas in the hands slot
+    handlers['d3d_present']()
+    check('an unresolved Fire in the AF gloves states STR +7',
+          rowOf(api.buffSummary({}, { Fire = 1 }, {}), 'STR'), 7)
+    world.gear = nil
+    handlers['d3d_present']()
+    check('...and +6 with them off', rowOf(api.buffSummary({}, { Fire = 1 }, {}), 'STR'), 6)
     -- A row LSB does not flag stays raw: Tactical Processor is Ice, 70 at one
     -- Ice maneuver, and 84 if the boost had been let near it.
     local _, _, flat = api.attachEffect('Tactical Processor', { Ice = 1, Light = 1 },

@@ -476,8 +476,16 @@ AshitaCore = {
             GetInventory = function() return permissive({
                 -- .Index is a container/slot pair; 0 means the slot is empty,
                 -- which is the shape equippedItemId walks
-                GetEquippedItem = function() return world.equipped or { Index = 0 } end,
-                GetContainerItem = function() return nil end,
+                -- world.gear: 0-based slot -> item id, so a fixture can wear
+                -- a piece; each worn slot is container 0, index slot + 1
+                GetEquippedItem = function(_, slot)
+                    if world.gear and world.gear[slot] then return { Index = slot + 1 } end
+                    return world.equipped or { Index = 0 }
+                end,
+                GetContainerItem = function(_, _, idx)
+                    local id = world.gear and world.gear[idx - 1]
+                    return id and { Id = id, Count = 1 } or nil
+                end,
             }) end,
         }
     end,

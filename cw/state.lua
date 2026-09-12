@@ -8,7 +8,7 @@ local config = require('cw.config')
 -- created here, never reassigned, and reset in place (tm.clear, or key by key) -
 -- so only these may be aliased at module scope:
 --   burden, cost, samples, ids, snap, costSource, costDispute, burdenVerified,
---   castThresh, castStat, seededBy, lastReconcile, waterSince.
+--   castThresh, castStat, castBonus, seededBy, lastReconcile, waterSince.
 -- Everything else is read as tm.x at every use: every value; every table a
 -- reset REPLACES with a fresh one (petKnown, mobs, touched, petUntil, petDiaBio,
 -- regenAt, usedAt, gaps, windowAt, spellRecast, rows); and every record replaced
@@ -113,7 +113,7 @@ tm.predWhy       = nil -- the reason behind predSnapshot, for the record
 -- exactly this reason: a native read racing zone-in entity churn is an SEH
 -- fault, which pcall cannot catch, and it surfaces as an unattributed crash.
 tm.snap = { self_id = 0, pet_id = 0, is_pup = false, thresh = config.threshold,
-            party = {} }   -- the party's ServerIds as a set: a member's blow counts as ours
+            bonus = 0, party = {} }   -- the party's ServerIds as a set: a member's blow counts as ours
 -- [mob server id] = os.clock() of the last blow the master, the automaton or
 -- the party landed on it: evidence that the mob's enmity list is not empty,
 -- which a Deploy alone is not. Dropped with the mob's death and on zone.
@@ -154,9 +154,11 @@ tm.costDispute = {}
 -- catch-up or a manual sync makes it a guess, and nothing learns from a guess.
 tm.burdenVerified = {}
 -- What the server actually evaluated the last time each element resolved:
--- the threshold under the gear worn at that instant, and your stat with the
--- maneuver set on. Both persist between maneuvers; the panel predicts with them.
-tm.castThresh, tm.castStat = {}, {}
+-- the threshold under the gear worn at that instant, your stat with the
+-- maneuver set on, and the Maneuver Bonus the worn hands added to the stat the
+-- maneuver grants. All three persist between maneuvers; the panel predicts
+-- with them.
+tm.castThresh, tm.castStat, tm.castBonus = {}, {}, {}
 tm.seededBy = {}       -- 'activate' | 'dea' until the element next reconciles
 tm.lastReconcile = {}  -- os.clock() per element, for the ticks field in the log
 -- Since each element last resolved: ticks that had a Water maneuver up, and

@@ -8,6 +8,7 @@ local ELEMENTS = D.ELEMENTS
 local tm = require('cw.state')
 local U  = require('cw.util')
 local safe, isPup, isPupSub, equippedThreshold = U.safe, U.isPup, U.isPupSub, U.equippedThreshold
+local equippedManeuverBonus = U.equippedManeuverBonus
 local isLoggedIn, atCharacterSelect = U.isLoggedIn, U.atCharacterSelect
 local L  = require('cw.log')
 local logEvent = L.logEvent
@@ -208,6 +209,7 @@ local function tick()
     snap.party   = partyIds()   -- a member's blow counts as ours on a mob's enmity list
     snap.is_pup  = isPup() or isPupSub()
     snap.thresh  = equippedThreshold()   -- for elements that have not resolved yet
+    snap.bonus   = equippedManeuverBonus()   -- likewise, for their stat gain
     expireTarget()   -- before anything reads petTarget: the ladder, the row
     sampleFlameHolder()
 

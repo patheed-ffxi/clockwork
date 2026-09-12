@@ -316,8 +316,9 @@ end
 
 -- ==================================================== maneuver stat gain ==
 -- A maneuver is not only an attachment switch. Each one adds a stat to the
--- automaton for as long as it is up, at power `1 + level / 15` - +6 at 75,
--- CHR per Light maneuver
+-- automaton for as long as it is up, at power `1 + level / 15` plus the
+-- Maneuver Bonus on the hands worn as it resolves, floored - +6 at 75, +7 in
+-- the AF gloves, CHR per Light maneuver
 -- (automaton.lua onUseManeuver, effects/<element>_maneuver.lua). Dark grants
 -- nothing at all - its effect script is empty, and MANEUVER_STAT's Dark = MP is
 -- the BURDEN check's stat, not a gain - so it has no row here.
@@ -367,7 +368,10 @@ local function maneuverGain(counts)
         local stat = MANEUVER_GAIN[el]
         local n    = math.min(counts[el] or 0, 3)
         if stat ~= nil and n > 0 then
-            rows[#rows + 1] = { stat, '', power * n, false }
+            -- the bonus this element last resolved under (burden.lua), else
+            -- what the hands carry now
+            local bonus = tm.castBonus[el] or tm.snap.bonus or 0
+            rows[#rows + 1] = { stat, '', (power + bonus) * n, false }
         end
     end
     return rows

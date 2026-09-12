@@ -304,6 +304,26 @@ do
     check('an injected 0x028 is ignored', m.verified.Fire, false)
     check('...and moves nothing', m.burden.Fire, 0)
 
+    -- The AF gloves' Maneuver Bonus is read off the hands as the maneuver
+    -- resolves and kept for that element, so the +1 outlasts the swap back
+    -- to other gloves - until the next Fire resolves bare-handed.
+    local function fireSTR()
+        for _, r in ipairs(api.buffSummary({}, { Fire = 1 }, {})) do
+            if r[1] == 'STR' then return r[3] end
+        end
+    end
+    world.gear = { [6] = 14930 }   -- Puppetry Dastanas in the hands slot
+    advance(6)
+    send028({ actor = SELF, category = 6, param = 141,
+              targets = { { id = SELF, actions = { { message = 798, param = 41 } } } } })
+    world.gear = nil
+    advance(1)
+    check('a Fire resolved in the AF gloves states STR +7', fireSTR(), 7)
+    advance(6)
+    send028({ actor = SELF, category = 6, param = 141,
+              targets = { { id = SELF, actions = { { message = 798, param = 42 } } } } })
+    check('...and +6 once one resolves bare-handed', fireSTR(), 6)
+
     -- the 0x044 job gate: the packet carries the job it describes, and only
     -- PUP's variant has this layout. Another job's would be read as an
     -- automaton loadout made of whatever those bytes happen to hold.
