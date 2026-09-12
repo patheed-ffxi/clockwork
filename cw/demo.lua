@@ -31,13 +31,15 @@ local ELEMENTS, ATTACH_OFFSET, EQUIP_OFFSET = D.ELEMENTS, D.ATTACH_OFFSET, D.EQU
 -- All twelve slots are filled, and each set is inside its head+frame element
 -- capacity: a half-empty automaton is not what the panel is ever looked at
 -- against, and the Loadout tab's capacity bars only say anything on a real one.
+-- Every attachment is one Horizon grants (ToAU era: nothing above tier II, no
+-- ZNM drops), so each loadout is one a player there could actually build.
 local SCENARIOS = {
     {
         name  = 'Valoredge, melee',
         head  = 'Valoredge Head', frame = 'Valoredge Frame',
-        attach = { 'Strobe II', 'Tension Spring II', 'Attuner', 'Inhibitor',
-                   'Armor Plate II', 'Shock Absorber II', 'Barrier Module', 'Schurzen',
-                   'Heatsink', 'Steam Jacket', 'Flashbulb', 'Optic Fiber' },
+        attach = { 'Strobe', 'Tension Spring II', 'Attuner', 'Inhibitor',
+                   'Armor Plate II', 'Shock Absorber', 'Armor Plate', 'Schurzen',
+                   'Heatsink', 'Tension Spring', 'Flashbulb', 'Optic Fiber' },
         pet = { name = 'Alpha', hpp = 84, mpp = 61, tp = 1240, dist = 3.2 },
         mob = { name = 'Steelshell Crab', hpp = 46, slot = 41 },
         maneuvers = { { element = 'Fire', remaining = 42 },
@@ -57,8 +59,8 @@ local SCENARIOS = {
     {
         name  = 'Sharpshot, ranged',
         head  = 'Sharpshot Head', frame = 'Sharpshot Frame',
-        attach = { 'Drum Magazine', 'Barrage Turbine', 'Accelerator', 'Scope',
-                   'Stabilizer II', 'Target Marker', 'Speedloader II', 'Attuner',
+        attach = { 'Drum Magazine', 'Turbo Charger', 'Accelerator', 'Scope',
+                   'Stabilizer II', 'Target Marker', 'Tension Spring II', 'Attuner',
                    'Tension Spring', 'Inhibitor', 'Damage Gauge', 'Scanner' },
         pet = { name = 'Bravo', hpp = 97, mpp = 44, tp = 620, dist = 11.8 },
         mob = { name = 'Greater Colibri', hpp = 78, slot = 41 },
@@ -67,7 +69,7 @@ local SCENARIOS = {
                    Thunder = 9, Water = 0, Light = 0, Dark = 0 },
         -- the shot mid-recast, which is the row whose model the head and Drum
         -- Magazine both move: 20 s on a Sharpshot head, less the attachment
-        used = { [1949] = 8, [2746] = 60 },
+        used = { [1949] = 8 },
         effects = {},
         skills = { melee = 150, ranged = 231, magic = 120 },
     },
@@ -90,9 +92,9 @@ local SCENARIOS = {
     {
         name  = 'Spiritreaver, overloaded',
         head  = 'Spiritreaver Head', frame = 'Stormwaker Frame',
-        attach = { 'Mana Booster', 'Amplifier II', 'Tactical Processor', 'Arcanoclutch',
-                   'Mana Converter', 'Disruptor', 'Economizer', 'Mana Tank II',
-                   'Mana Channeler', 'Heatsink', 'Condenser', 'Heat Capacitor' },
+        attach = { 'Mana Booster', 'Loudspeaker', 'Tactical Processor', 'Tranquilizer',
+                   'Mana Converter', 'Mana Conserver', 'Economizer', 'Mana Tank II',
+                   'Mana Channeler', 'Heatsink', 'Condenser', 'Mana Tank' },
         pet = { name = 'Delta', hpp = 41, mpp = 12, tp = 0, dist = 6.1 },
         mob = { name = 'Aht Urhgan Wamoura', hpp = 12, slot = 41 },
         -- the state the model is loudest about: maneuvers dead, burden past the
@@ -101,7 +103,7 @@ local SCENARIOS = {
         overload = 14,
         burden = { Fire = 0, Ice = 44, Wind = 0, Earth = 0,
                    Thunder = 0, Water = 0, Light = 0, Dark = 51 },
-        used = { [2745] = 20, [2747] = 45 },
+        used = { [2068] = 20 },
         effects = {},
         skills = { melee = 110, ranged = 95, magic = 231 },
     },

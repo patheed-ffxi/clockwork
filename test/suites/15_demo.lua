@@ -55,7 +55,7 @@ do
     -- Refresh (43) was on this melee scenario, and Refresh comes from Mana
     -- Converter alone (ABILITY_ICON 1948) - a Dark attachment no Valoredge in
     -- the list wears - so the strip showed a buff with no source and no recast
-    -- behind it. Stoneskin is the one that belongs: Shock Absorber II is worn,
+    -- behind it. Stoneskin is the one that belongs: Shock Absorber is worn,
     -- and enable() lands every effect 20 s ago, so 1946 is 20 s into its 180.
     local onPet = {}
     for _, b in ipairs(api.petStrip()) do onPet[b.id] = true end
