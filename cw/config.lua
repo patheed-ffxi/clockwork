@@ -111,6 +111,14 @@ local config =
     -- The automaton's target and its HP under the vitals. Drawn only while the
     -- automaton has actually acted on something, so it costs no line at rest.
     show_target = true,
+    -- Three lines a player can do without once they are known: the WS line
+    -- (and the weaponskill on the compact strip), the `gives` list of what the
+    -- maneuvers are adding, and the oil counts - their no-oils warning too;
+    -- the compact strip's rail still turns red with none left. Off hides the
+    -- line only: the weaponskill is still predicted and logged.
+    show_ws     = true,
+    show_gives  = true,
+    show_oils   = true,
     -- The HUD's typeface: two files under C:\Windows\Fonts, loaded once on the
     -- load event and never in a frame (tm.fontLoad). A missing file falls back
     -- to ImGui's own font at the same sizes. Segoe UI ships its semibold as a

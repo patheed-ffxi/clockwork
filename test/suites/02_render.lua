@@ -38,6 +38,18 @@ do
     -- gem falls back to its two-letter token - which is still not the word.
     check('table draws the element as a token', sawExact('Fi'), true)
     check('one gives, never two', countExact('gives') <= 1, true)
+    -- The WS, gives and oils lines each have a switch, and off draws none of
+    -- it: gives neither in the recast column nor on the line under the table.
+    check('the WS line is drawn', sawExact('WS'), true)
+    check('the gives list is drawn', countExact('gives'), 1)
+    check('the oils line is drawn', saw('no oils'), true)
+    api.config.show_ws, api.config.show_gives, api.config.show_oils = false, false, false
+    frame('smoke lines hidden')
+    check('show_ws off drops the WS line', sawExact('WS'), false)
+    check('show_gives off drops the gives list', countExact('gives'), 0)
+    check('show_oils off drops the oils line', saw('no oils'), false)
+    api.config.show_ws, api.config.show_gives, api.config.show_oils = true, true, true
+    frame('smoke maneuver')
     -- 1.7.0: the maneuver list is laid out with explicit column offsets, not an
     -- ImGui table - that squeezed its LAST column to a single character,
     -- and BeginTable's width negotiation is the one thing a stubbed ImGui cannot

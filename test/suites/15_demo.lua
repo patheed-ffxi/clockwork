@@ -89,6 +89,20 @@ do
     for _, r in ipairs(api.timerRows()) do rows2[r.name] = r.state end
     check('the shot is a row on this frame', rows2['Ranged Attack'] ~= nil, true)
     check('...and Shield Bash is not', rows2['Shield Bash'], nil)
+    -- On a melee frame the weaponskill line is the strip's big line - the
+    -- weaponskill, or why there is none, since demo TP moves. show_ws off takes
+    -- it off, and puts no 'no frame' in its place.
+    api.config.compact = true
+    local ws2, why2 = api.predictWS(api.currentFrame())
+    local head2 = ws2 or why2
+    frame('melee compact')
+    check('the melee strip has a weaponskill line', head2 ~= nil, true)
+    check('...drawn as its big line', saw(head2 or ''), true)
+    api.config.show_ws = false
+    frame('melee compact, no weaponskill')
+    check('show_ws off takes it off the melee strip', saw(head2 or ''), false)
+    check('...and says no frame in its place', saw('no frame'), false)
+    api.config.show_ws, api.config.compact = true, false
 
     -- ...and the rest of the list, then off. The cycle always ends somewhere
     -- you can get back out of.
@@ -100,6 +114,11 @@ do
     api.config.compact = true
     frame('caster compact')
     check('the caster strip leads with the spell', saw('WS '), true)
+    -- show_ws off: the footnote's weaponskill goes
+    api.config.show_ws = false
+    frame('caster compact, no weaponskill')
+    check('show_ws off takes the weaponskill off the caster strip', saw('WS '), false)
+    api.config.show_ws = true
     handlers['command']({ command = '/cw demo' })   -- 4: Spiritreaver
     check('the fourth is overloaded', api.demoName(), 'Spiritreaver, overloaded')
     api.config.compact = false

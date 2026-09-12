@@ -123,15 +123,16 @@ end
 local function answers()
     local frame = tm.frameNow()
     local ws, why, mode = nil, nil, nil
-    if frame ~= nil then ws, why, mode = predictWS(frame) end
+    if frame ~= nil and config.show_ws then ws, why, mode = predictWS(frame) end
     local sp = tm.spell
     -- Which of the two gets the big line. On a caster frame it is the spell: the
     -- ladder fires over and over through a fight and the weaponskill fires once,
     -- on whatever the TP happened to land on. Stormwaker collapses onto
     -- Harlequin in tm.frameNow, so this covers both casting frames. The Status
-    -- tab keeps WS first - it has room for both at full size.
+    -- tab keeps WS first - it has room for both at full size. With the
+    -- weaponskill hidden (show_ws) the spell has the big line on any frame.
     local spellName = (sp ~= nil and sp.mode ~= 'none') and sp.name or nil
-    local spellFirst = (frame == 'Harlequin') and spellName ~= nil
+    local spellFirst = (frame == 'Harlequin' or not config.show_ws) and spellName ~= nil
     local second = (config.show_reasoning and why) or ''
     if spellFirst then
         second = (ws ~= nil)
@@ -149,8 +150,12 @@ local function answers()
                 tm.fit(spellName .. ((sp.mode == 'uncertain') and '?' or ''), TEXT_W, 'head'))
     elseif ws ~= nil then
         tm.head((mode == 'chain') and COL_GOOD or COL_TEXT, tm.fit(ws, TEXT_W, 'head'))
-    else
+    elseif config.show_ws then
         tm.text('text', (mode == 'hold') and COL_WARN or COL_DIM, tm.fit(why or 'no frame', TEXT_W))
+    else
+        -- No weaponskill shown and no spell to name: the spell's own reason
+        -- ('nothing to cast'), or blank on a frame that never casts.
+        tm.text('text', COL_DIM, tm.fit((sp ~= nil and sp.mode ~= 'none' and sp.why) or '', TEXT_W))
     end
     if second ~= '' then
         tm.text('label', COL_DIM, tm.fit(second, TEXT_W, 'label'))
@@ -158,7 +163,8 @@ local function answers()
         imgui.Dummy({ TEXT_W, tm.px('label') })
     end
     imgui.EndGroup()
-    tip(('WS %s\n%s\nSpell %s\n%s'):format(ws or '-', why or '', (sp and sp.name) or '-', (sp and sp.why) or ''))
+    tip((config.show_ws and ('WS %s\n%s\n'):format(ws or '-', why or '') or '')
+        .. ('Spell %s\n%s'):format((sp and sp.name) or '-', (sp and sp.why) or ''))
 end
 
 tm.drawCompact = function()
@@ -402,6 +408,12 @@ tm.settingsTab = function()
     tm.text('label', COL_DIM, 'display')
     toggle('the automaton\'s target', 'show_target',
            'Show the target\'s name and HP under the vitals while it fights.')
+    toggle('weaponskill prediction', 'show_ws',
+           'The WS line on the Status tab, and the weaponskill on the compact\nstrip. Off hides it only: it is still predicted and logged.')
+    toggle('what maneuvers give', 'show_gives',
+           'The gives list on the Status tab: what your maneuvers are adding\nright now.')
+    toggle('oil counts', 'show_oils',
+           'The oils line on the Status tab, and its warning when you have none.')
     toggle('what-if sidebar', 'sidebar',
            'A second window: what using each maneuver now would change.',
            function() tm.sidebarInvalidate() end)
@@ -654,7 +666,7 @@ end
 -- reads, taken once by drawFull().
 local function drawStatus(pet, maneuvers, overload)
     -- 1. what the automaton is about to do
-    drawWSLine()
+    if config.show_ws then drawWSLine() end
     tm.spellLine()
 
     -- 2. Maneuvers and burden describe the same eight elements, so
@@ -666,7 +678,9 @@ local function drawStatus(pet, maneuvers, overload)
     -- 3. what the maneuvers are buying - the DELTA over the same
     --    attachments with nothing up, not the total. An attachment
     --    that does not scale (flat Max HP) contributes nothing here.
-    local buffs = buffSummary(equippedAttachments(), maneuverCounts(), {})
+    --    Hidden (show_gives) is an empty list: the column and the line
+    --    under the table both draw nothing from it.
+    local buffs = config.show_gives and buffSummary(equippedAttachments(), maneuverCounts(), {}) or {}
     local cx = tm.elCols()
     drawManeuverTable(rows, cx)
     local mods = drawRecastColumn(cx, #rows + 1, buffs)
@@ -677,7 +691,7 @@ local function drawStatus(pet, maneuvers, overload)
     end
 
     drawGives(mods)
-    drawOils()
+    if config.show_oils then drawOils() end
 end
 
 -- =========================================================== tuning tab ==
