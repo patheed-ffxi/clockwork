@@ -96,6 +96,7 @@ local api = (function()
         petKnown = function() return tm.petKnown end,
         seenDur = function() return tm.seenDur end,
         regenAt = function() return tm.regenAt end,
+        partyBuffs = function() return tm.partyBuffs end,
         petTarget = function() return tm.petTarget end,
         deployTo = function() return tm.deployTo end,
         setPetTarget = function(v) tm.petTarget = v end,

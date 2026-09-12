@@ -12,7 +12,8 @@ local config = require('cw.config')
 -- Everything else is read as tm.x at every use: every value; every table a
 -- reset REPLACES with a fresh one (petKnown, mobs, touched, petUntil, petDiaBio,
 -- regenAt, usedAt, gaps, windowAt, spellRecast, rows); and every record replaced
--- whole on each update (auto044, resonance, fhPending, applyState, spell, demo).
+-- whole on each update (auto044, resonance, fhPending, applyState, spell, demo,
+-- partyBuffs, partyNow).
 -- An alias of one of those goes stale at its first replacement.
 local tm = { usedAt = {}, gaps = {}, model = {}, modelKnown = {}, rows = {}, edgeAt = nil,
              windowAt = {}, spellRecast = {},
@@ -117,6 +118,13 @@ tm.snap = { self_id = 0, pet_id = 0, is_pup = false, thresh = config.threshold,
 -- the party landed on it: evidence that the mob's enmity list is not empty,
 -- which a Deploy alone is not. Dropped with the mob's death and on zone.
 tm.touched = {}
+-- [member ServerId] = { [effect id] = true }: the party's buffs, off the last
+-- 0x076 (the master's own never ride in it). Replaced whole by each one.
+tm.partyBuffs = {}
+-- The party as the last prediction read it - { sid, name, hpp, hp, fx } per
+-- member in the zone - and the master's HP%. gather() publishes both for the
+-- cast record, which the packet thread writes and which cannot read memory.
+tm.partyNow, tm.youHpp = {}, nil
 -- The character this state describes (its ServerId), and the 0x044 sequence
 -- the last frame saw. A frame that finds a different character forgets the
 -- old one; a 0x044 that arrived while no frame ran is the new character's.

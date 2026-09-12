@@ -232,6 +232,30 @@ local function send028(p)
     handlers['packet_in']({ id = 0x028, injected = false, data = build028(p) })
 end
 
+-- ------------------------------------------------------- 0x076 builder --
+-- The party's buffs: up to five { id = ServerId, buffs = { effect ids } },
+-- laid out as XiPackets world/server/0x0076 has it - 0x30 bytes each from
+-- 0x04, the id at +0, two high bits per buff at +0x08, the low bytes at +0x10
+-- with 0xFF in every unused slot.
+local function send076(members)
+    local b = {}
+    for i = 1, 0x04 + 5 * 0x30 do b[i] = 0 end
+    for i, mem in ipairs(members) do
+        local base = 0x04 + 0x30 * (i - 1)
+        for k = 0, 3 do b[base + k + 1] = math.floor(mem.id / 256 ^ k) % 256 end
+        for j = 0, 31 do b[base + 0x10 + j + 1] = 0xFF end
+        for j, buff in ipairs(mem.buffs or {}) do
+            local slot = j - 1
+            b[base + 0x10 + slot + 1] = buff % 256
+            local at = base + 0x08 + math.floor(slot / 4) + 1
+            b[at] = b[at] + math.floor(buff / 256) * 4 ^ (slot % 4)
+        end
+    end
+    local out = {}
+    for i = 1, #b do out[i] = string.char(b[i]) end
+    handlers['packet_in']({ id = 0x076, injected = false, data = table.concat(out) })
+end
+
 -- ------------------------------------------------------- log and recasts --
 -- The last log record of a kind, read back from the file the addon writes,
 -- and one recast row by ability id.

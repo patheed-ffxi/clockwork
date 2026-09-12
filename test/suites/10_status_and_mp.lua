@@ -611,3 +611,116 @@ do
     check('mp unknown max says so', last.rec.maxmp, -1)
     world.petMpp = 100
 end
+
+-- ---------------------------------------------------- healing a party --
+-- The Soulsoother's party arm: a member cured with no Light up, a member
+-- lower than a master who also qualifies named first, the tier off the
+-- member's own missing HP; and a flagged heal answered by a different Cure
+-- logged as a miss the model owned up to, with the target and the party on
+-- the record.
+do
+    local STONEY = 0x01000530
+    world.hp, world.maxhp, world.petHpp, world.petMpp = 1000, 1000, 100, 100
+    world.icons, world.timers = nil, nil                  -- no maneuvers: no Light
+    world.buffer = { 5, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    world.party, world.partyHp = { [1] = 25 }, { [1] = 250 }
+    world.partyNames, world.partyIds = { [1] = 'Stoney' }, { [1] = STONEY }
+    advance(30)
+    petOut(PET + 96, MOB + 96)
+    send044({ head = 5, frame = 35, magic = 280, hp = 600, maxhp = 600, mp = 600, maxmp = 600 })
+    api.setPetTarget(MOB + 96)
+    local name, why, mode = api.predictSpell()
+    check('party cure with no Light', name, 'Cure V')           -- 250 of 1000: 750 missing
+    check('party cure names the member', why, 'heal · Stoney at 25% (enmity picks who)')
+    check('party cure is flagged', mode, 'uncertain')
+    -- one Light: the threshold is 40, and you at 35% qualify too
+    world.icons, world.timers = { 306 }, { 0 }
+    world.hp = 350
+    name, why = api.predictSpell()
+    check('the lower member is named first', why, 'heal · Stoney at 25% · or you at 35%')
+    check('...with the member\'s tier', name, 'Cure V')
+    world.party, world.partyHp = { [1] = 38 }, { [1] = 380 }
+    name, why, mode = api.predictSpell()
+    check('a lower master is named first', why, 'heal · you at 35% · or Stoney at 38%')
+    check('...with your tier', name, 'Cure V')                  -- 650 missing
+    check('...and still flagged', mode, 'uncertain')
+    -- the flagged heal published, then answered by another Cure
+    world.hp = 1000
+    world.party, world.partyHp = { [1] = 25 }, { [1] = 250 }
+    handlers['d3d_present']()
+    check('the flagged heal is published', api.spellSnapshot().rung, 'heal')
+    check('...flagged', api.spellSnapshot().mode, 'uncertain')
+    api.spellCountersReset()
+    CLOCKWORK_TEST.last = nil
+    send028(act(8, 4, STONEY))                                  -- a Cure IV on Stoney
+    local last = CLOCKWORK_TEST.last
+    check('another Cure for a flagged heal is no anomaly', last.kind, 'pet_spell')
+    check('...but is marked a miss', last.rec.missed_uncertain, true)
+    check('the record names the target', last.rec.target, 'Stoney')
+    check('the record carries the party', last.rec.party, 'Stoney 25% 250')
+    check('the record carries your HP%', last.rec.you_hpp, 100)
+    frame('party cure counters')
+    check('it is not counted against the model', saw('spells 1, mispredicted 0'), true)
+    -- a flagged heal answered by something that is not a Cure still is one
+    advance(20)
+    handlers['d3d_present']()
+    check('the flagged heal again', api.spellSnapshot().rung, 'heal')
+    send028(act(8, 56, MOB + 96))                               -- Slow instead
+    check('a non-Cure for a flagged heal is an anomaly', CLOCKWORK_TEST.last.kind, 'spell_mispredicted')
+    check('...aimed at the mob', CLOCKWORK_TEST.last.rec.target, 'mob')
+    world.party, world.partyHp, world.partyNames, world.partyIds = nil, nil, nil, nil
+    world.icons, world.timers = nil, nil
+end
+
+-- ------------------------------------ the party's buffs, and the arm --
+-- 0x076 carries every other member's buffs, and the enhance rung's party arm
+-- reads them. Regen is certain only at the two ends; Protect, Shell and
+-- Haste go to the first member without one once you and the automaton both
+-- hold it.
+do
+    local STONEY, AZURTH = 0x01000531, 0x01000532
+    send076({ { id = STONEY, buffs = { 42, 296 } } })
+    local fx = api.partyBuffs()[STONEY]
+    check('0x076 reads a buff', fx ~= nil and fx[42] == true, true)
+    check('0x076 rebuilds the high bits', fx ~= nil and fx[296] == true, true)
+    check('0x076 a high id is not its low byte', fx ~= nil and fx[40] == nil, true)
+    check('0x076 skips the empty slots', fx ~= nil and fx[255] == nil, true)
+
+    world.hp, world.maxhp, world.petHpp, world.petMpp = 1000, 1000, 100, 100
+    world.icons, world.timers = { 42, 40, 41, 33 }, { 0, 0, 0, 0 }   -- you hold all four
+    world.buffer = { 5, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    world.party, world.partyHp = { [1] = 100, [2] = 100 }, { [1] = 900, [2] = 900 }
+    world.partyNames, world.partyIds = { [1] = 'Stoney', [2] = 'Azurth' }, { [1] = STONEY, [2] = AZURTH }
+    advance(30)
+    petOut(PET + 97, MOB + 97)
+    send044({ head = 5, frame = 35, magic = 280, hp = 600, maxhp = 600, mp = 600, maxmp = 600 })
+    api.setPetTarget(MOB + 97)
+    -- the automaton's own Haste proves it holds Protect and Shell
+    send028({ actor = PET + 97, category = 4, param = 57,
+              targets = { { id = PET + 97, actions = { { message = 230, param = 33 } } } } })
+    advance(30)
+    send076({ { id = STONEY, buffs = { 42 } }, { id = AZURTH, buffs = { 42, 40, 41 } } })
+    local name, why, mode = api.predictSpell()
+    check('party protect names the member', why,
+          'enhance · no Protect on Stoney · or a Regen, if hate is on someone without one')
+    check('party protect tier', name, 'Protect IV')
+    check('party protect is flagged', mode, 'uncertain')
+    send076({ { id = STONEY, buffs = { 42, 40 } }, { id = AZURTH, buffs = { 42, 40, 41 } } })
+    name, why = api.predictSpell()
+    check('party shell next', why,
+          'enhance · no Shell on Stoney · or a Regen, if hate is on someone without one')
+    -- nobody holds a Regen: one is certain, only its target is not
+    world.icons, world.timers = { 40, 41, 33 }, { 0, 0, 0 }
+    send076({ { id = STONEY, buffs = { 40, 41 } }, { id = AZURTH, buffs = { 40, 41 } } })
+    name, why = api.predictSpell()
+    check('party regen when nobody has one', why, 'enhance · no Regen on anyone (hate picks who)')
+    check('...names a Regen', (name or ''):sub(1, 5), 'Regen')
+    -- a member no 0x076 has named could hold one: hedged, not certain
+    world.party[3], world.partyHp[3], world.partyIds[3] = 100, 900, 0x01000533
+    name, why = api.predictSpell()
+    check('an unread member hedges the Regen',
+          (why or ''):find('or a Regen, if hate is on someone without one', 1, true) ~= nil, true)
+    world.party, world.partyHp, world.partyNames, world.partyIds = nil, nil, nil, nil
+    world.icons, world.timers = nil, nil
+    send076({})
+end

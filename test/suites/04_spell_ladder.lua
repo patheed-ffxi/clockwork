@@ -314,16 +314,21 @@ do
     check('ss cure tier 195', name, 'Cure III')
     world.maxhp = 1000
     world.hp, world.petHpp = 1000, 100
-    -- LSB's third heal target: Soulsoother + Light + a party (509-543). Enmity
-    -- picks the member and a member's maximum HP is unreadable, so the pick is
-    -- flagged; without the branch the ladder falls through and names Regen in
-    -- plain text.
+    -- LSB's third heal target: Soulsoother + a party (509-543). Enmity picks
+    -- the member, so the pick is flagged and names the lowest one; without the
+    -- branch the ladder falls through and names Regen in plain text. No HP is
+    -- read for this member, so the tier stays at its floor.
     world.party = { [2] = 40 }
     name, why, mode = predict()
     check('ss party heal', name, 'Cure')
     check('ss party uncertain', mode, 'uncertain')
-    check('ss party why', why, 'heal · a party member at 40% (enmity picks who, and the tier)')
-    world.party = nil
+    check('ss party why', why, 'heal · Member2 at 40% (enmity picks who)')
+    -- ...and with its HP read, the tier comes from the member's own missing
+    -- HP: 150 at 40% is 375 all told, 225 missing -> Cure III
+    world.partyHp = { [2] = 150 }
+    name = predict()
+    check('ss party tier from its hp', name, 'Cure III')
+    world.party, world.partyHp = nil, nil
     -- tryStatus' automaton side and naFor's Erase fallback: nothing else routes
     -- an erasable effect to spell 143, and only the master side was reached.
     send028({ actor = MOB + 2, category = 4, param = 56, targets = { { id = PET + 4, actions = { { message = 236, param = 13 } } } } })
