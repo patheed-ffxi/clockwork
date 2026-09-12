@@ -36,6 +36,8 @@ local MSG_STATUS_ON, MSG_STATUS_OFF, petEffects = P.MSG_STATUS_ON, P.MSG_STATUS_
 -- it (it only skips IsAnySpellAvailable). An unaffordable spell is
 -- skipped and the ladder walks on, exactly like a failed skill check.
 -- Row 847 (skill 368, no spell_list entry) dropped - past any era cap.
+-- Row 277, Dread Spikes (Spiritreaver, skill 256), dropped - Horizon does not
+-- grant it.
 local ROWS = {
     {   1,  12, 31,   0,   0,  136129,   5,   8, 'heal'      }, -- cure
     {   2,  45, 31,   0,   0,       0,   5,  24, 'heal'      }, -- cure ii
@@ -114,7 +116,6 @@ local ROWS = {
     { 254,  27, 61,   5,  64,       0,  10,   5, 'enfeeble'  }, -- blind
     { 260, 105,  8,   0,   0,       0,  10,  25, 'enfeeble'  }, -- dispel
     { 270, 120, 32, 140,   0,       0,  60,  33, 'enfeeble'  }, -- absorb-int
-    { 277, 256, 32,   0,   0,       0, 180,  78, 'enhance'   }, -- dread spikes
     { 286, 337, 61,  21,   0,       0,  20,  36, 'enfeeble'  }, -- addle
     { 477, 337, 16,   0,   0,       0,  24,  82, 'enhance'   }, -- regen iv
     { 511, 410,  8,   0,   0,       0,  20,  80, 'enhance'   }, -- haste ii
@@ -133,14 +134,16 @@ end
 
 -- setMagicCooldowns, by head enum; a missing rung is one that head never
 -- tries. Seconds. (Stormwaker's heal / elemental / enhance and Sharpshot's
--- heal are LSB's own guesses.)
+-- heal are LSB's own guesses.) Spiritreaver's enhance window (135 upstream)
+-- is left out: Dread Spikes is its only spell there, and Horizon does not
+-- grant it.
 local WINDOWS = {
     [1] = { magic = 10, heal = 15, enfeeble = 10 },
     [2] = { magic = 20, heal = 20 },
     [3] = { magic = 12, heal = 18, enfeeble = 12 },
     [4] = { magic = 10, heal = 15, enfeeble = 12, elemental = 33, enhance = 10 },
     [5] = { magic = 4,  heal = 15, enfeeble = 4, enhance = 15, status = 15 },
-    [6] = { magic = 10, enfeeble = 10, elemental = 33, enhance = 135 },
+    [6] = { magic = 10, enfeeble = 10, elemental = 33 },
 }
 
 -- status_effects.flags: 0x2 erasable (what Erase answers), 0x1 dispelable
@@ -419,7 +422,7 @@ tm.spellObserve = function(category, id, recast, now)
         -- The packet's own number when it is plausible, the table's when
         -- it is not. Unclamped, one bad 32-bit read pins that spell off
         -- the ladder for the rest of the session with nothing to show for
-        -- it; the longest recast in the table is Dread Spikes at 180. Same
+        -- it; the longest recast in the table is Aspir II at 75. Same
         -- house rule as noteMob's param bound above.
         local secs
         if recast ~= nil and recast > 0 and recast <= 600 then
@@ -859,8 +862,8 @@ end
 -- TryEnhance: Regen on whoever holds the most hate (unreadable: the
 -- master unless it already has one), then Protect, Shell, Haste on the
 -- first of master and automaton lacking it, Stoneskin and Phalanx on the
--- master. Spiritreaver: Dread Spikes alone. Protectra / Shellra V need
--- skill 425 / 434, past any era cap, so they are not modelled.
+-- master. Protectra / Shellra V need skill 425 / 434, past any era cap,
+-- so they are not modelled.
 -- The Regen goes to ONE entity - the single highest-enmity one - and is
 -- skipped outright if that one already has it. There is no fall-through:
 -- the master can go minutes without one while the automaton is re-Regened
@@ -880,10 +883,6 @@ end
 -- that a Regen may take the window instead of pretending to know. The flag
 -- lands where the doubt is and stays off the predictions that are fine.
 local function tryEnhance(ctx, usable)
-    if ctx.head == 6 then
-        if usable(277) then return { id = 277, rung = 'enhance', mode = 'maneuver', why = 'enhance · Dark' } end
-        return nil
-    end
     local m, p = ctx.masterHas, ctx.petHas
     local mHas, pHas = m(42), p(42)
     local hedge = nil
@@ -1179,7 +1178,10 @@ local function walk(pred)
             or (not light and rung('heal', tryHeal)) or rung('enhance', tryEnhance)
             or rung('enfeeble', tryEnfeeble) or nil
     elseif head == 6 then
-        return (ice and rung('elemental', tryElemental)) or (dark and rung('enhance', tryEnhance))
+        -- Upstream's Dark arm tries the enhance rung first, but its one
+        -- Spiritreaver spell there is Dread Spikes, which Horizon does not
+        -- grant: TryEnhance finds nothing and Dark goes on to enfeeble.
+        return (ice and rung('elemental', tryElemental))
             or ((dark or ctx.petHpp < 75 or ctx.petMpp < 75) and rung('enfeeble', tryEnfeeble))
             or (not ice and rung('elemental', tryElemental)) or nil
     end

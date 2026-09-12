@@ -109,8 +109,8 @@ do
     -- a 0x044 HAS been seen, so the skill still gates: parseJobExtra builds
     -- auto044 whatever the head byte says. The optimistic path is only for a
     -- session that has had no 0x044 at all.
-    check('skill still gates', api.canCast(277), false)          -- Dread Spikes needs 256
-    check('window spiritreaver enhance', api.spellWindows()[6].enhance, 135)
+    check('skill still gates', api.canCast(248), false)          -- Aspir II needs 331
+    check('window spiritreaver no enhance', api.spellWindows()[6].enhance, nil)
     check('window valoredge no enfeeble', api.spellWindows()[2].enfeeble, nil)
     check('erasable dia', api.erasable(134), true)
     check('erasable poison not', api.erasable(3), false)
@@ -417,13 +417,13 @@ do
     name, why = predict()
     check('sr dark promoted', name, 'Silence')
     check('sr dark promoted why', why, 'enfeeble · Wind x2')
-    -- Dread Spikes needs magic 256; every other fixture sends 120, so head 6's
-    -- whole enhance arm was dead
+    -- Past upstream's Dread Spikes skill (256) Dark still goes to the enfeeble
+    -- list: Horizon does not grant the spell, so the enhance arm has nothing
     world.icons, world.timers = { 307 }, { 0 }
     send044({ head = 6, frame = 35, magic = 260, hp = 600, maxhp = 600, mp = 300, maxmp = 300 })
     name, why, mode, rung = predict()
-    check('sr dread spikes', name, 'Dread Spikes')
-    check('sr dread spikes rung', rung, 'enhance')
+    check('sr no dread spikes', name, 'Blind')
+    check('sr no dread spikes rung', rung, 'enfeeble')
     -- Scanner: LSB's resistance sort is unreadable AND exclusive with the
     -- Spiritreaver maneuver promotion, a branch no other assertion touches.
     send044({ head = 6, frame = 35, magic = 120, hp = 600, maxhp = 600, mp = 300, maxmp = 300 })
