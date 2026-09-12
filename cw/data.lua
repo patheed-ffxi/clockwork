@@ -28,7 +28,6 @@ local PET_MOBSKILL =
     [1942] = 'Arcuballista',   [1943] = 'Slapstick',
     [1949] = 'Ranged Attack',
     [2065] = 'Cannibal Blade', [2066] = 'Daze', [2067] = 'Knockout',
-    [2299] = 'Bone Crusher',   [2300] = 'Armor Piercer', [2301] = 'Magic Mortar',
 }
 local MOBSKILL_RANGED = 1949
 
@@ -69,11 +68,11 @@ for _, p in ipairs({
 
 -- Automaton mobskill -> skillchain properties. Horizon's own table
 -- (chains/skills.lua, skills.pup); upstream sql disagrees on String
--- Clipper (no Impaction there), Daze and Magic Mortar.
+-- Clipper (no Impaction there) and Daze.
 local MOBSKILL_SC =
 {
     [1940]={7,6}, [1941]={4,8}, [1942]={3,1}, [1943]={5,8}, [2065]={2,5},
-    [2066]={1}, [2067]={4,6}, [2299]={12}, [2300]={9}, [2301]={11},
+    [2066]={1}, [2067]={4,6},
     [2743]={10,4}, [2744]={11,8},
 }
 
@@ -180,7 +179,9 @@ local PUPPET_CAP = {
 -- param, remaining ties by list order (strict > on both, so first listed
 -- stays). Elements per the per-ability automaton scripts; params from
 -- mob_skills.sql; order from mob_skill_lists.sql.
--- WotG-era String Shredder / Armor Shatterer omitted (Horizon is ToAU).
+-- WotG-era String Shredder / Armor Shatterer omitted (Horizon is ToAU), and
+-- the three tier-3 skills - Bone Crusher (2299), Armor Piercer (2300) and
+-- Magic Mortar (2301) - which Horizon does not grant.
 -- A resonance open on the target overrides all of this, Inhibitor or not:
 -- the closer is chosen instead (see the note above SC_NAME, and burden.lua
 -- predictWS's chain branch).
@@ -191,19 +192,16 @@ local WS_LISTS =
         { id = 1940, name = 'Chimera Ripper', el = 'Fire',    param = 0   },
         { id = 1941, name = 'String Clipper', el = 'Thunder', param = 0   },
         { id = 2065, name = 'Cannibal Blade', el = 'Dark',    param = 150 },
-        { id = 2299, name = 'Bone Crusher',   el = 'Light',   param = 245 },
     },
     Sharpshot =
     {
         { id = 1942, name = 'Arcuballista',  el = 'Fire',    param = 0   },
         { id = 2066, name = 'Daze',          el = 'Thunder', param = 150 },
-        { id = 2300, name = 'Armor Piercer', el = 'Dark',    param = 245 },
     },
     Harlequin =  -- Stormwaker shares this list
     {
         { id = 1943, name = 'Slapstick',    el = 'Thunder', param = 0   },
         { id = 2067, name = 'Knockout',     el = 'Wind',    param = 145 },
-        { id = 2301, name = 'Magic Mortar', el = 'Light',   param = 225 },
     },
 }
 

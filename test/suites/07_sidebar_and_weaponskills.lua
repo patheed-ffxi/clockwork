@@ -55,8 +55,8 @@ do
 
     -- predictWS: no argument is the live call, and passing the live counts
     -- explicitly must answer identically. melee 120 puts Chimera Ripper and
-    -- String Clipper inside the gate and leaves Cannibal Blade (150) and Bone
-    -- Crusher (245) outside it, so the pick is decided by maneuvers alone.
+    -- String Clipper inside the gate and leaves Cannibal Blade (150) outside
+    -- it, so the pick is decided by maneuvers alone.
     send044({ head = 2, frame = 33, melee = 120 })
     world.icons, world.timers = { 300 }, { 0 }                        -- one Fire up
     handlers['d3d_present']()
