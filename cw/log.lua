@@ -121,8 +121,9 @@ end
 -- logged, so an anomaly does not send you to the JSONL to find out. It is
 -- built off the record's own fields: the two prediction anomalies carry
 -- `expected` (and the `expected_why` behind it), a burden mismatch carries
--- predicted against actual. Anything else keeps the bare form rather than
--- inventing a shape.
+-- predicted against actual, and a record that explains itself carries `note` -
+-- a stat check contradicting the stat you set says so there. Anything else
+-- keeps the bare form rather than inventing a shape.
 local function flagAnomaly(kind, tbl)
     tm.anomalies = tm.anomalies + 1
     tbl.anomaly = true
@@ -136,6 +137,8 @@ local function flagAnomaly(kind, tbl)
         end
     elseif tbl.predicted ~= nil and tbl.actual ~= nil then
         said = (' - predicted %s%%, read %s%%'):format(tostring(tbl.predicted), tostring(tbl.actual))
+    elseif tbl.note ~= nil then
+        said = (' - %s'):format(tostring(tbl.note))
     end
     if config.anomaly_chat then
         print(chat.header('clockwork'):append(chat.error(('ANOMALY %s'):format(kind)))

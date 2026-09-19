@@ -68,6 +68,7 @@ To load it every time, add `/addon load clockwork` to your Ashita script.
 | `/cw demo` | made-up automatons, for looking at the HUD off PUP; each `/cw demo` is the next one, then off again |
 | `/cw attachments` | the attachments you own |
 | `/cw equipped` | head, frame and attachments |
+| `/cw stat` | the stat you wear when each maneuver goes off — `/cw stat wind 83`, `now` to take what you are wearing, `off` to go back to reading it. See *Gear swaps* below |
 | `/cw reset` | clear burden, learned costs and counters |
 | `/cw sync` | burden to zero — manual resync only |
 
@@ -79,7 +80,8 @@ clockwork writes these under your Ashita config directory:
   whenever you change a setting in game. A whitelist of display and reporting keys only;
   the model constants are deliberately *not* reachable from the UI, so an old settings
   file can never resurrect a value that has since been corrected.
-  Unknown keys and wrong types are ignored.
+  Unknown keys and wrong types are ignored. The one thing saved here that is not a
+  display key is `stat_<Element>` — your own stat for that maneuver, from `/cw stat`.
 - `config/addons/clockwork/<Character>_YYYY.MM.DD.jsonl` — the log, one JSON object per
   line. Off by default: turn it on from the Settings tab.
 - `config/addons/clockwork/sets/<name>.txt` — saved attachment sets, one item name per
@@ -96,6 +98,23 @@ assumption, not a verified server rule. **Many of the other values were transcri
 LandSandBoat and are unverified on HorizonXI**, including most attachment effects and several
 ability recasts. Treat a number on the HUD as the model's answer rather than the
 server's, and please report the ones that turn out wrong.
+
+### Gear swaps
+
+A maneuver costs 15 burden when your stat meets or beats the automaton's and 20 when it
+does not, compared as the maneuver goes off — so a gear-swap addon that puts a stat set on
+for the maneuver changes the answer. **clockwork cannot see that set.** The client is only
+told your stats when it asks (opening the status or equipment menu) or when something like
+a level or a kill makes the server send them, and *never* because you swapped gear, so the
+stats it reads are whatever you were wearing at the last such moment.
+
+If you swap for maneuvers, tell it what you wear: `/cw stat wind 83`. That number is
+compared against the automaton's live stat, so the check is still lost once that element is
+stacked and its stat climbs past yours. `/cw stat wind now` takes the value from memory —
+open the equipment menu while wearing the set first, or it will take the stale one — and
+`/cw stat wind off` goes back to reading it. The values are saved, and the Tuning tab's
+cost view says `your setting` for an element using one. Change food, sub job or gear and
+the number is stale: a stat check that contradicts it is logged, and says so.
 
 ## Reporting a wrong prediction
 

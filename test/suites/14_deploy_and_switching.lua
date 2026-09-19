@@ -173,6 +173,92 @@ do
     handlers['command']({ command = '/cw reset' })
 end
 
+-- --------------------------------- a stat you set outranks what is read --
+-- No stat packet follows a gear swap, so a maneuver set's stats never reach the
+-- client: the read is whatever was worn at the last refresh - the equipment
+-- menu, a level, a kill - and the model called checks lost that the server
+-- scored won, +5 burden a time (B13 in the findings). A NUMBER in
+-- config.stat_check is what you really wear. It is compared against the
+-- automaton's LIVE stat, so it wins the check bare and still loses once that
+-- element is stacked, which 'win' and 'lose' cannot say.
+do
+    local m, cfg = api.model(), api.config
+    local was, wasStats, wasTune = cfg.stat_check, world.stats, api.tuneTab()
+    local function said(text)
+        for _, p in ipairs(printed) do if p:find(text, 1, true) then return true end end
+        return false
+    end
+    petOut(PET + 310, MOB + 310)
+    api.timersClear(false)
+    cfg.stat_check = {}
+    world.stats = { [3] = 73 }            -- AGI as memory holds it: no set in it
+    send044({ head = 2, frame = 33, stats = { AGI = 80 } })
+    handlers['d3d_present']()
+    handlers['command']({ command = '/cw reset' })
+    check('the stale read loses the check', (api.computeCost('Wind')), 20)
+
+    -- the Wind set is worth +10 AGI, and the client cannot see it
+    handlers['command']({ command = '/cw stat wind 83' })
+    check('the command stores the stat', cfg.stat_check.Wind, 83)
+    check('...so the check is won', (api.computeCost('Wind')), 15)
+    check('...the model holds that cost', m.cost.Wind, 15)
+    check('...and says where it came from', m.costSource.Wind, 'yours')
+    api.selectTuneTab('cost')
+    frame('cost view with a set stat')
+    check('the cost column says whose it is', saw('your setting'), true)
+    check('...against the stat you set', saw('AGI 83 v 80'), true)
+
+    -- stacked: the automaton's AGI climbs past the number and it loses again,
+    -- which is the whole reason this is a number and not a verdict
+    send044({ head = 2, frame = 33, stats = { AGI = 87 } })
+    handlers['d3d_present']()
+    check('a stacked element loses again', m.cost.Wind, 20)
+    check('...still from your setting', m.costSource.Wind, 'yours')
+
+    -- `now` takes the LIVE read, not the setting: the one call that has to see
+    -- what memory holds
+    handlers['command']({ command = '/cw stat wind now' })
+    check('now takes the live read', cfg.stat_check.Wind, 73)
+
+    handlers['command']({ command = '/cw stat wind off' })
+    check('off clears the setting', cfg.stat_check.Wind, nil)
+    check('...and the source with it', m.costSource.Wind ~= 'yours', true)
+
+    -- what it refuses: Dark reads MP live, and neither a non-element nor an
+    -- impossible stat may land
+    handlers['command']({ command = '/cw stat dark 50' })
+    check('Dark is refused - it compares MP', cfg.stat_check.Dark, nil)
+    handlers['command']({ command = '/cw stat banana 50' })
+    handlers['command']({ command = '/cw stat wind 0' })
+    handlers['command']({ command = '/cw stat wind 1000' })
+    check('an impossible stat is refused', cfg.stat_check.Wind, nil)
+    printed = {}
+    handlers['command']({ command = '/cw stat' })
+    check('the list names the stat each element checks', said('AGI'), true)
+
+    -- ...and a setting that has gone stale - food worn off, gear changed - is
+    -- the likeliest thing to be wrong here, so the drift record and the chat
+    -- line both name it rather than blaming the model
+    local wasChat = cfg.anomaly_chat
+    cfg.anomaly_chat = true
+    send044({ head = 2, frame = 33, stats = { AGI = 80 } })   -- bare again: 83 wins
+    handlers['d3d_present']()
+    handlers['command']({ command = '/cw stat wind 83' })
+    api.reconcile('Wind', 35, false)                  -- burden 60, verified
+    printed = {}
+    api.reconcile('Wind', 60 + 20 - 30 + 5, false)    -- the server charged 20, not 15
+    local line = lastLog('stat_check_drift')
+    check('the drift record names your setting',
+          line ~= nil and line:find('may be out of date', 1, true) ~= nil, true)
+    check('...and the chat line says it too', said('may be out of date'), true)
+
+    cfg.anomaly_chat = wasChat
+    cfg.stat_check, world.stats = was, wasStats
+    api.selectTuneTab(wasTune)
+    handlers['command']({ command = '/cw reset' })
+end
+
+
 -- ------------------------------------------- a pending Deploy ends with its mob --
 -- Deploy sets deployTo for the mob the automaton has not touched yet, and
 -- gather() reads that as engaged. A death message ended petTarget but not

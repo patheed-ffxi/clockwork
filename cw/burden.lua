@@ -1,7 +1,8 @@
 -- cw/burden.lua - the overload model: the stat check and the cost of a maneuver,
 -- burden and its decay, the live maneuvers, and the weaponskill predictor.
 -- Exports those functions (return table at the end); publishes
--- tm.dropLearnedCosts, tm.frameNow and tm.scMiss, and writes the weaponskill
+-- tm.dropLearnedCosts, tm.refreshStatChecks (cw/settings.lua calls it when a
+-- saved stat lands), tm.frameNow and tm.scMiss, and writes the weaponskill
 -- snapshot the packet thread reads (tm.predSnapshot, tm.predWhy, tm.predMode).
 local config = require('cw.config')
 local D  = require('cw.data')
@@ -37,6 +38,17 @@ local function myStat(el)
     end, nil)
 end
 
+-- The stat you have on when this element's maneuver goes off, when you have
+-- told the addon what it is (config.stat_check as a number). It outranks the
+-- live read because the live read cannot see a gear-swap set: no 0x061 follows
+-- an equip, so IPlayer still holds the stats of whatever was worn at the last
+-- refresh. Dark is excluded - it compares MP, which is read live and current.
+local function statOverride(el)
+    if el == 'Dark' then return nil end
+    local v = config.stat_check and config.stat_check[el] or nil
+    return (type(v) == 'number') and v or nil
+end
+
 -- The server's rule, evaluated directly:
 --   non-Dark: your effective stat <  automaton's -> 20, else 15
 --   Dark:     your MP             <  automaton's -> 15, else 10
@@ -48,7 +60,7 @@ local function computeCost(el, mine)
     if tm.auto044 ~= nil then
         theirs = (statName == 'MP') and tm.auto044.mp or tm.auto044[statName]
     end
-    mine = mine or myStat(el)
+    mine = statOverride(el) or mine or myStat(el)
     -- A zero stat means the 0x044 has not populated - except MP, where 0 is
     -- the real value for Valoredge and Sharpshot (and 0 < 0 is false: cost 10).
     if mine == nil or theirs == nil or (theirs == 0 and statName ~= 'MP') then
@@ -79,13 +91,15 @@ local function applyStatCheck(el)
     -- is the thing under suspicion. /cw reset clears it, and so does a frame
     -- change - see tm.dropLearnedCosts.
     if costSource[el] == 'observed' then return end
-    -- Your side of the check is the stat you had on when the element last
-    -- resolved - which follows a gear-swap addon's maneuver set (LuaShitaCast's,
-    -- say) if you use one - not what you idle in. The automaton's side is
-    -- always the freshest 0x044.
+    -- Your side of the check is the number you set for this element, and
+    -- failing that the stat read when the element last resolved - neither of
+    -- which is what you idle in. The automaton's side is always the freshest
+    -- 0x044.
     local computed = computeCost(el, castStat[el])
     if computed ~= nil then
-        cost[el], costSource[el] = computed, castStat[el] and 'cast' or 'computed'
+        cost[el], costSource[el] = computed,
+            (statOverride(el) ~= nil) and 'yours'
+            or (castStat[el] and 'cast' or 'computed')
     else
         cost[el], costSource[el] = hi, 'assumed'
     end
@@ -189,6 +203,12 @@ local function learnCost(el, implied, castCost, sound, mine, theirs, statName, t
                       pet_base = (tm.auto044 and tm.auto044.base and statName ~= 'MP')
                                  and tm.auto044.base[statName] or -1,
                       thresh = thresh, hands = hands, man = tm.predManeuvers or '?' }
+        -- A stat you set yourself is the likeliest thing to be wrong here:
+        -- food, a debuff, a sub job or new gear all move it and nothing tells
+        -- the addon. Say so on the record, and in the chat line.
+        if statOverride(el) ~= nil then
+            rec.note = ('your %s setting (%d) may be out of date'):format(statName, mine or -1)
+        end
         if costDispute[el] ~= nil and costDispute[el].count >= 3 and near ~= castCost then
             rec.was, rec.now = castCost, near
             cost[el], costSource[el] = near, 'observed'
@@ -202,7 +222,8 @@ local function learnCost(el, implied, castCost, sound, mine, theirs, statName, t
         -- The live comparison stands (or nothing sound contradicts it): that
         -- is the cost, and with castStat remembered the panel predicts with it.
         if sound then costDispute[el] = nil end
-        cost[el], costSource[el] = castCost, 'cast'
+        cost[el], costSource[el] = castCost,
+            (statOverride(el) ~= nil) and 'yours' or 'cast'
     end
     return learned
 end
@@ -608,7 +629,9 @@ local function refreshPrediction()
     tm.predSnapshot, tm.predWhy, tm.predMode = predictWS(f)
 end
 
-return { computeCost = computeCost,
+tm.refreshStatChecks = refreshStatChecks
+
+return { computeCost = computeCost, myStat = myStat,
          applyStatCheck = applyStatCheck, refreshStatChecks = refreshStatChecks, predict = predict,
          overloadDuration = overloadDuration,
          meanAbsError = meanAbsError, reconcile = reconcile,

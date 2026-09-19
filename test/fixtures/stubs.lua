@@ -409,6 +409,11 @@ local player = permissive({
     GetSubJob  = function() return world.subjob end,
     GetMainJobLevel = function() return world.mainlvl end,
     GetSubJobLevel  = function() return world.sublvl end,
+    -- The master's stats as the CLIENT holds them - 0-based, STR..CHR - which
+    -- is what the addon reads when you have not told it what a maneuver set
+    -- puts on you. Unset is 0, the permissive stub's old answer.
+    GetStat = function(_, idx) return (world.stats or {})[idx] or 0 end,
+    GetStatModifier = function(_, idx) return (world.statMods or {})[idx] or 0 end,
     GetStatusIcons = function() return world.icons or {} end,     -- 300..307 = maneuvers
     GetStatusTimers = function() return world.timers or {} end,
     GetHPMax = function() return world.maxhp or 0 end,

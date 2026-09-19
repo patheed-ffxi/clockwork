@@ -770,7 +770,7 @@ local function drawTuningCost()
         -- tooltip below spells all five out.
         tm.text('text', COL_DIM, tm.costWord(costSource[el]))
     end
-    tip('Beat the automaton\'s stat and the maneuver costs 15 burden; lose and\nit costs 20. Dark compares MP, at 10 and 15. Green is the low cost.\nYour side is the stat you wore when that element last resolved, so a\n? means you have not used it yet.\n\nWhere the cost came from: from the server (what it charged), learned\n(inferred over several uses), from your last use (your stats then),\nfrom your gear now (a guess off what you are wearing), assumed\n(stats unreadable), forced (set in the config).')
+    tip('Beat the automaton\'s stat and the maneuver costs 15 burden; lose and\nit costs 20. Dark compares MP, at 10 and 15. Green is the low cost.\nYour side is the stat you wore when that element last resolved, so a\n? means you have not used it yet. A gear-swap set\'s stats never reach the\nclient at all: /cw stat wind 83 tells it what you really wear.\n\nWhere the cost came from: from the server (what it charged), learned\n(inferred over several uses), your setting (/cw stat), from your last\nuse (your stats then), from your gear now (a guess off what you are\nwearing), assumed (stats unreadable), forced (set in the config).')
 end
 
 -- The Tuning tab body. Everything it reads is module scope or on tm.
