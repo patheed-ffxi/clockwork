@@ -74,7 +74,9 @@ do
     -- the tuning tab's cost columns, the tightest absolute offsets in the addon
     api.selectTuneTab('cost')
     frame('scale 150 cost')
-    check('cost columns scale', saw('X:132') and saw('X:252') and saw('X:342'), true)
+    check('cost columns scale', saw('X:132') and saw('X:252') and saw('X:360'), true)
+    -- the ladder's three numbers space themselves off the same scale
+    check('the cost ladder spaces with them', saw('SP:8'), true)
 
     -- 200%: the top of the slider's range, and the width a player actually
     -- reaches on a 4K screen.
@@ -218,12 +220,12 @@ do
     check('tuning offers both views',
           saw('BTN:model##cw_tune') and saw('BTN:maneuver cost##cw_tune'), true)
     check('tuning shows the model', saw('  anomalies'), true)
-    check('tuning holds back the cost', saw('cost 1'), false)
+    check('tuning holds back the cost', saw('cost of the 1st'), false)
     clicks['maneuver cost##cw_tune'] = true
     frame('tuning cost clicked')
     check('the button switched the view', api.tuneTab(), 'cost')
     frame('tuning cost')
-    check('tuning shows the cost', saw('cost 1'), true)
+    check('tuning shows the cost', saw('cost of the 1st'), true)
     -- every element, whether or not one is up: a stat check you are losing is
     -- worth knowing BEFORE you cast it
     check('tuning states every stat check', sawExact('  Fire') and sawExact('  Dark'), true)

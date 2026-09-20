@@ -41,7 +41,7 @@ prediction did *not* match the server, so the model can be corrected from real p
 |---|---|
 | **Loadout** — head, frame and attachments, capacity per element, and the saved-set picker | **What-if sidebar** — what each maneuver would change if you used it now |
 | ![The Loadout tab](screenshots/loadout.png) | ![The what-if sidebar](screenshots/what_if.png) |
-| **Tuning → model** — automaton skill, the overload threshold, anomalies and spell windows | **Tuning → maneuver cost** — each element's cost, from the gear you are wearing |
+| **Tuning → model** — automaton skill, the overload threshold, anomalies and spell windows | **Tuning → maneuver cost** — each element's stat check and what its 1st, 2nd and 3rd maneuver costs |
 | ![The Tuning tab, model view](screenshots/tuning_model.png) | ![The Tuning tab, maneuver cost view](screenshots/tuning_maneuver_cost.png) |
 
 **Compact** (`/cw compact`) — the whole HUD on one line:

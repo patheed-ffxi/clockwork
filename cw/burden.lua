@@ -17,6 +17,8 @@ local L  = require('cw.log')
 local logEvent, flagAnomaly = L.logEvent, L.flagAnomaly
 local R  = require('cw.reading')
 local equippedNames, hasAttachment = R.equippedNames, R.hasAttachment
+local A  = require('cw.attachments')
+local maneuverStep = A.maneuverStep
 -- The shared tables, never reassigned after cw/state.lua creates them.
 local burden, cost, samples, ids = tm.burden, tm.cost, tm.samples, tm.ids
 local snap, costSource, costDispute, burdenVerified = tm.snap, tm.costSource, tm.costDispute, tm.burdenVerified
@@ -421,6 +423,34 @@ local function maneuverCounts()
     return c, total
 end
 
+-- What the 1st, 2nd and 3rd maneuver of an element costs, as three values.
+-- Here rather than up with the cost math because it needs maneuverCounts(),
+-- as decay() does.
+--
+-- Every maneuver raises the automaton's own matching stat, so a check won bare
+-- can be lost by the third - which is worth knowing BEFORE the first is used.
+-- The automaton's stat is read with whatever is already up, so the ladder is
+-- taken off its bare value. The step you are ON is the model's live cost,
+-- whatever its source, so this can never contradict the chance the rest of the
+-- HUD predicts with; a step with nothing to compare is nil.
+local function costLadder(el)
+    local hi = (el == 'Dark') and config.dark_cost or config.default_cost
+    local lo = hi - 5
+    local _, mine, theirs = computeCost(el, castStat[el])
+    local step = maneuverStep(el)
+    local n    = math.min(maneuverCounts()[el] or 0, 3)
+    local bare = (theirs ~= nil) and (theirs - n * step) or nil
+    local out  = {}
+    for k = 0, 2 do
+        if k == n then
+            out[k + 1] = cost[el]
+        elseif mine ~= nil and bare ~= nil then
+            out[k + 1] = (mine < bare + k * step) and hi or lo
+        end
+    end
+    return out
+end
+
 -- The per-tick decay rate right now, with its inputs: Water maneuvers up and
 -- the Heatsink extra. Nothing passive in this model - see config.heatsink_decay.
 -- `counts` is the sidebar's hypothetical vector; omitted - as every other
@@ -635,7 +665,8 @@ return { computeCost = computeCost, myStat = myStat,
          applyStatCheck = applyStatCheck, refreshStatChecks = refreshStatChecks, predict = predict,
          overloadDuration = overloadDuration,
          meanAbsError = meanAbsError, reconcile = reconcile,
-         activeManeuvers = activeManeuvers, maneuverCounts = maneuverCounts, decayRate = decayRate,
+         activeManeuvers = activeManeuvers, maneuverCounts = maneuverCounts,
+         costLadder = costLadder, decayRate = decayRate,
          decay = decay, currentFrame = currentFrame, formSkillchain = formSkillchain,
          rawResonance = rawResonance, liveResonance = liveResonance, predictWS = predictWS,
          refreshPrediction = refreshPrediction }

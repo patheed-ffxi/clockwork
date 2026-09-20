@@ -358,6 +358,17 @@ local function maneuverPower()
     return 1 + math.floor(lvl / 15)
 end
 
+-- The stat ONE maneuver of this element grants the automaton: the power above
+-- plus the Maneuver Bonus that element last resolved under, else what the hands
+-- carry now. 0 for Dark, whose effect grants nothing, and 0 with no PUP level to
+-- read. The cost ladder steps the automaton's stat by this.
+local function maneuverStep(el)
+    if MANEUVER_GAIN[el] == nil then return 0 end
+    local power = maneuverPower()
+    if power == 0 then return 0 end
+    return power + (tm.castBonus[el] or tm.snap.bonus or 0)
+end
+
 -- The maneuvers' own contribution at `counts`, in the shape buffSummary sums:
 -- one row per element with a maneuver up, carrying the stat and nothing derived
 -- from it.
@@ -487,4 +498,4 @@ end
 
 return { ATTACH_MODS = ATTACH_MODS, ATTACH_ELEM = ATTACH_ELEM,
          attachMods = attachMods, fmtMod = fmtMod, attachEffect = attachEffect,
-         buffSummary = buffSummary }
+         maneuverStep = maneuverStep, buffSummary = buffSummary }

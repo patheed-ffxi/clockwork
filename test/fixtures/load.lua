@@ -154,6 +154,7 @@ local api = (function()
         resetSwallowed = function() tm.swallowed = 0 end,
         config = config, reconcile = B.reconcile, decayRate = B.decayRate,
         computeCost = function(el, mine) return B.computeCost(el, mine) end,
+        costLadder = function(el) return B.costLadder(el) end,
         model = function()
             return { burden = tm.burden, cost = tm.cost, costSource = tm.costSource,
                      costDispute = tm.costDispute, waterSince = tm.waterSince,
