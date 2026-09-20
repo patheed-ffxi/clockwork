@@ -10,13 +10,92 @@ local logPath = L.logPath
 local R  = require('cw.reading')
 local equippedNames, ownedAttachments = R.equippedNames, R.ownedAttachments
 local B  = require('cw.burden')
-local applyStatCheck = B.applyStatCheck
+local applyStatCheck, computeCost, myStat = B.applyStatCheck, B.computeCost, B.myStat
 local P  = require('cw.pet')
 local S  = require('cw.sets')
 local DEMO = require('cw.demo')
 local resetModel = P.resetModel
 -- The shared table, never reassigned after cw/state.lua creates it.
 local samples = tm.samples
+
+-- `/cw stat` - your side of the stat check, typed, for the gear the client
+-- cannot be asked about: a swap sends no stat packet, so a maneuver set's stats
+-- never reach memory and the live read is whatever was worn at the last refresh
+-- (the equipment menu, a level, a kill). The number is compared against the
+-- automaton's LIVE stat on every use, so an element you beat bare still costs
+-- 20 once that element is stacked.
+local function statCommand(which, value)
+    local function say(line) print(chat.header('clockwork'):append(chat.message(line))) end
+    local function oops(line) print(chat.header('clockwork'):append(chat.error(line))) end
+    local function statName(el) return D.MANEUVER_STAT[el] or '?' end
+
+    if which == nil then
+        say('the stat you wear when each maneuver goes off:')
+        for _, el in ipairs(ELEMENTS) do
+            if el ~= 'Dark' then
+                local v = config.stat_check[el]
+                say(('  %-8s %-4s %s'):format(el, statName(el),
+                    (type(v) == 'number') and tostring(v)
+                    or (type(v) == 'string') and (v .. ' - forced in cw/config.lua')
+                    or 'read from your gear'))
+            end
+        end
+        say('/cw stat <element> <number|now|off> - `now` takes what you are wearing')
+        return
+    end
+
+    local el = nil
+    for _, e in ipairs(ELEMENTS) do if e:lower() == which:lower() then el = e end end
+    if el == nil then
+        oops(('"%s" is not an element - fire, ice, wind, earth, thunder, water or light')
+             :format(tostring(which)))
+        return
+    elseif el == 'Dark' then
+        oops('Dark compares MP, which is read live and needs no setting')
+        return
+    end
+
+    local v = value and value:lower() or nil
+    local took = nil
+    if v == nil then
+        oops(('/cw stat %s <number|now|off>'):format(el:lower()))
+        return
+    elseif v == 'off' or v == 'clear' or v == 'none' then
+        config.stat_check[el] = nil
+    elseif v == 'now' then
+        -- The live read, deliberately not the setting: this is the one call
+        -- that must see what memory holds rather than what you have told us.
+        local n = myStat(el)
+        if n == nil or n <= 0 then
+            oops(('your %s could not be read'):format(statName(el)))
+            return
+        end
+        config.stat_check[el], took = n, n
+    else
+        local n = tonumber(v:match('%d+') or '')
+        if n == nil or n < 1 or n > 999 then
+            oops(('"%s" is not a stat between 1 and 999'):format(tostring(value)))
+            return
+        end
+        config.stat_check[el] = math.floor(n)
+    end
+
+    applyStatCheck(el)
+    tm.saveSettings()
+    local set = config.stat_check[el]
+    if set == nil then
+        say(('%s: back to reading your %s off your gear'):format(el, statName(el)))
+        return
+    end
+    local c, _, theirs = computeCost(el)
+    say(('%s: your %s is %d%s'):format(el, statName(el), set,
+        (theirs ~= nil and c ~= nil)
+        and (', the automaton has %d - a maneuver costs %d'):format(theirs, c)
+        or ' - no automaton data yet'))
+    if took ~= nil then
+        say('  taken from memory - open the equipment menu while wearing the set if that looks wrong')
+    end
+end
 
 -- ============================================================== commands =
 local function onCommand(e)
@@ -94,6 +173,9 @@ local function onCommand(e)
             end
         end
 
+    elseif sub == 'stat' then
+        statCommand(args[3], args[4])
+
     elseif sub == 'compact' then
         config.compact = not config.compact
         tm.saveSettings()
@@ -134,6 +216,8 @@ local function onCommand(e)
         say('    each /cw demo is the next one, then off again')
         say('  attachments - the attachments you own')
         say('  equipped - head, frame and attachments')
+        say('  stat - the stat you wear for each maneuver, which a gear swap')
+        say('    hides from the client: /cw stat wind 83, or now, or off')
         say('  reset - clear burden, costs and counters')
         say('  sync - burden to zero')
         say('Everything else is on the Settings tab: logging, the sidebar,')

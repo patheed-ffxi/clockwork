@@ -14,11 +14,12 @@ local safe = U.safe
 --
 -- A WHITELIST, not a dump of `config`. The inline table stays the defaults and
 -- stays the only place the model constants are edited - activate_burden,
--- dea_burden, heatsink_decay, the stat checks and the tolerances - so a
+-- dea_burden, heatsink_decay, the stat-check verdicts and the tolerances - so a
 -- settings file left over from an older build can never resurrect a
 -- value that has since been corrected. Only the display and
 -- reporting keys the UI can actually reach are written, and anything else in
--- the file is ignored.
+-- the file is ignored. The one exception is not a model constant at all: the
+-- stat you wear for each maneuver is YOURS, and is saved - see STAT_KEYS.
 --
 -- Format is the sets store's: plain text, one `key = value` a line, parsed by
 -- hand. Not JSON - the addon has no json dependency and writes its own JSONL by
@@ -44,10 +45,24 @@ local PERSIST = {
     ui_scale          = { 'int', 75, 200 },
     warn_at           = { 'int', 1, 100 },
 }
+-- The stat you have on when each element's maneuver goes off, as a number
+-- (cw/config.lua's stat_check). Saved as `stat_Wind = 83`, because it is your
+-- own gear rather than one of the model's constants, and retyping it after
+-- every reload is not a thing anyone would do. NUMBERS ONLY: a 'win' / 'lose'
+-- verdict stays an inline edit, so an old file still cannot resurrect one. A
+-- value cleared in game writes no line at all, so what comes back is the inline
+-- value - normally nil, meaning work it out. Dark is not here: it compares MP,
+-- which is read live and needs no help.
+local STAT_KEYS = { 'Fire', 'Ice', 'Wind', 'Earth', 'Thunder', 'Water', 'Light' }
+local IS_STAT   = {}
+for _, el in ipairs(STAT_KEYS) do IS_STAT[el] = true end
+
 -- Snapshot of the inline values, taken as this module loads and therefore
 -- before any file is read. This is what Restore defaults puts back.
 local DEFAULTS = {}
 for k in pairs(PERSIST) do DEFAULTS[k] = config[k] end
+local STAT_DEFAULTS = {}
+for _, el in ipairs(STAT_KEYS) do STAT_DEFAULTS[el] = config.stat_check[el] end
 
 local ORDER = {}
 for k in pairs(PERSIST) do ORDER[#ORDER + 1] = k end
@@ -70,6 +85,12 @@ tm.saveSettings = function()
                         '# Delete this file to go back to the defaults in cw/config.lua.\n' }
         for _, k in ipairs(ORDER) do
             lines[#lines + 1] = ('%s = %s\n'):format(k, tostring(config[k]))
+        end
+        for _, el in ipairs(STAT_KEYS) do
+            local v = config.stat_check[el]
+            if type(v) == 'number' then
+                lines[#lines + 1] = ('stat_%s = %d\n'):format(el, v)
+            end
         end
         -- Through writeFile's temp file, with the write and the close both
         -- checked: a write that fails after the open reports failure and
@@ -94,7 +115,15 @@ tm.loadSettings = function()
         for line in f:lines() do
             local k, v = line:match('^%s*([%w_]+)%s*=%s*(.-)%s*$')
             local spec = k and PERSIST[k] or nil
-            if spec ~= nil then
+            local el   = k and k:match('^stat_(%a+)$') or nil
+            if el ~= nil and IS_STAT[el] then
+                -- A stat, not a verdict: anything that is not a plausible stat
+                -- leaves that element working it out, which is the safe half.
+                local n = tonumber(v)
+                if n ~= nil and n == n and n >= 1 and n <= 999 then
+                    config.stat_check[el] = math.floor(n)
+                end
+            elseif spec ~= nil then
                 if spec[1] == 'bool' then
                     if v == 'true' or v == 'false' then config[k] = (v == 'true') end
                 else
@@ -109,12 +138,17 @@ tm.loadSettings = function()
             end
         end
         f:close()
+        -- Those stats decide each element's cost, and nothing else would
+        -- recompute them until the next 0x044 arrived.
+        tm.refreshStatChecks()
         return true
     end, false)
 end
 
 tm.restoreDefaults = function()
     for k, v in pairs(DEFAULTS) do config[k] = v end
+    for _, el in ipairs(STAT_KEYS) do config.stat_check[el] = STAT_DEFAULTS[el] end
+    tm.refreshStatChecks()
     tm.sidebarInvalidate()
     tm.saveSettings()
 end

@@ -180,6 +180,35 @@ do
     check('scale clamped up to the floor', cfg.ui_scale, 75)
     check('warn clamped down to the ceiling', cfg.warn_at, 100)
 
+    -- The stat you wear for each maneuver IS saved - it is your own gear, not
+    -- one of the model's constants, and retyping it after every reload is not a
+    -- thing anyone would do. Numbers only, so a stale file cannot pin a verdict.
+    cfg.stat_check.Wind, cfg.stat_check.Water = 83, 90
+    api.saveSettings()
+    cfg.stat_check.Wind, cfg.stat_check.Water = nil, nil
+    api.loadSettings()
+    check('settings restored a stat', cfg.stat_check.Wind, 83)
+    check('...and another', cfg.stat_check.Water, 90)
+    f = assert(io.open(path, 'r'))
+    text = f:read('*a')
+    f:close()
+    check('the file holds the stat', text:find('stat_Wind = 83', 1, true) ~= nil, true)
+    check('...and no Dark one', text:find('stat_Dark', 1, true), nil)
+
+    f = assert(io.open(path, 'w'))
+    f:write('stat_Wind = win\n')        -- a verdict: an inline edit only
+    f:write('stat_Fire = 0\n')          -- not a plausible stat
+    f:write('stat_Ice = 1000\n')        -- nor is that
+    f:write('stat_Dark = 50\n')         -- Dark compares MP, read live
+    f:close()
+    cfg.stat_check.Wind, cfg.stat_check.Water = 83, nil
+    api.loadSettings()
+    check('a verdict in the file is ignored', cfg.stat_check.Wind, 83)
+    check('...and a stat out of range', cfg.stat_check.Fire, nil)
+    check('...at either end', cfg.stat_check.Ice, nil)
+    check('...and Dark is not a stat key', cfg.stat_check.Dark, nil)
+    cfg.stat_check.Wind = nil
+
     -- Restore defaults puts the INLINE values back and writes them out
     api.restoreDefaults()
     check('restore brings back the scale', cfg.ui_scale, 100)
@@ -190,6 +219,7 @@ do
     check('restore was written, not just applied', cfg.ui_scale, 100)
     check('restore turns logging back off', cfg.logging, false)
     check('restore turns the prediction lines back off', cfg.debug_predictions, false)
+    check('restore clears the stat you set', cfg.stat_check.Wind, nil)
     suiteLogging()
 
     -- a missing file is not an error: the inline defaults simply stand

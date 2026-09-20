@@ -58,6 +58,17 @@ local config =
     -- (tm.costSource). 'lose' = your stat is lower, 'win' = you meet or beat
     -- it: either pins the cost, for when the automaton's status window and the
     -- computation disagree.
+    --
+    -- A NUMBER is the stat you are WEARING when that element's maneuver goes
+    -- off - a gear-swap set's, say. The client cannot be asked for it: a swap
+    -- does not refresh your stats, so the value in memory is whatever you wore
+    -- at the last refresh (the equipment menu, a level, a kill), and a maneuver
+    -- set's stats never reach it. The number is compared against the
+    -- automaton's LIVE stat, so it still wins the first check of an element and
+    -- loses once that element is stacked - which 'win' and 'lose' cannot say.
+    -- Set it in game with `/cw stat <element> <number|now|off>`, which
+    -- remembers it in settings.txt; editing it here is the same thing without
+    -- the file. Dark is ignored - it compares MP, which is read live.
     stat_check =
     {
         Fire = nil,      -- STR

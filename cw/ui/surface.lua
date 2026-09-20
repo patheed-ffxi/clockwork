@@ -419,7 +419,8 @@ end
 -- they are - the log and the tests read them - and only the display moves.
 tm.costWord = function(src)
     return ({ set = 'forced', cast = 'from your last use', computed = 'from your gear now',
-              learned = 'learned', observed = 'from the server' })[src] or 'assumed'
+              learned = 'learned', observed = 'from the server',
+              yours = 'your setting' })[src] or 'assumed'
 end
 
 -- The element's gem at px, or its two-letter token when no texture loaded.
