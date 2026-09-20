@@ -414,6 +414,8 @@ tm.settingsTab = function()
            'The gives list on the Status tab: what your maneuvers are adding\nright now.')
     toggle('oil counts', 'show_oils',
            'The oils line on the Status tab, and its warning when you have none.')
+    toggle('harmless burden', 'show_idle_burden',
+           'Burden on an element with nothing up when another maneuver of it\nwould overload at 0%. Off hides those rows.')
     toggle('what-if sidebar', 'sidebar',
            'A second window: what using each maneuver now would change.',
            function() tm.sidebarInvalidate() end)
@@ -522,26 +524,38 @@ local function drawWSLine()
     end
 end
 
--- The maneuver table's rows, and whether a Fire maneuver is among them.
+-- The maneuver table's rows, whether a Fire maneuver is among them, and
+-- whether an idle row was hidden. Each row carries its own prediction: the
+-- gate below needs it before the row is kept, and taking it again in the
+-- row would be a second prediction of that element in the same frame.
 local function maneuverRows(maneuvers)
-    local hasFire, seen, rows = false, {}, {}
+    local hasFire, seen, rows, hid = false, {}, {}, false
     for i, m in ipairs(maneuvers) do
         if m.element == 'Fire' then hasFire = true end
         seen[m.element] = true
-        rows[#rows + 1] = { slot = i, el = m.element, rem = m.remaining or 0 }
+        local p, after = predict(m.element)
+        rows[#rows + 1] = { slot = i, el = m.element, rem = m.remaining or 0,
+                            p = p, after = after }
     end
     for _, el in ipairs(ELEMENTS) do
         if burden[el] > 0 and not seen[el] then
-            rows[#rows + 1] = { el = el }
+            local p, after = predict(el)
+            -- Nothing up and nothing at risk: every other cell in this row is
+            -- a dash, so the burden number is the whole row (show_idle_burden).
+            if p == 0 and not config.show_idle_burden then
+                hid = true
+            else
+                rows[#rows + 1] = { el = el, p = p, after = after }
+            end
         end
     end
-    return hasFire, rows
+    return hasFire, rows, hid
 end
 
 -- One row of the maneuver table: the slot, the gem, the seconds left, the
 -- burden and the overload chance of using another, at the columns `cx`.
 local function drawManeuverRow(r, cx)
-    local p, after = predict(r.el)
+    local p, after = r.p, r.after
     if r.slot ~= nil then
         tm.text('text', (r.slot == 1) and COL_WARN or COL_DIM,
                 ('%d'):format(r.slot))
@@ -576,10 +590,12 @@ end
 
 -- The maneuver table as one group: its header and a row each, or a dim
 -- line when there is nothing to show.
-local function drawManeuverTable(rows, cx)
+local function drawManeuverTable(rows, cx, hid)
     imgui.BeginGroup()
     if #rows == 0 then
-        tm.text('text', COL_DIM, 'no maneuvers, no burden')
+        -- 'no burden' would be a lie when a hidden row is still carrying some
+        tm.text('text', COL_DIM,
+                hid and 'no maneuvers, no risk' or 'no maneuvers, no burden')
     else
         -- 'OL%' rather than 'if cast': the row already says which element,
         -- so the header names the NUMBER. An element has two overload
@@ -672,8 +688,9 @@ local function drawStatus(pet, maneuvers, overload)
     -- 2. Maneuvers and burden describe the same eight elements, so
     --    they share one table: a row per live maneuver, oldest first
     --    (the next to drop), then a dim row for any element still
-    --    carrying burden with nothing up.
-    local hasFire, rows = maneuverRows(maneuvers)
+    --    carrying burden with nothing up - unless show_idle_burden is off
+    --    and that burden cannot overload anything yet.
+    local hasFire, rows, hid = maneuverRows(maneuvers)
 
     -- 3. what the maneuvers are buying - the DELTA over the same
     --    attachments with nothing up, not the total. An attachment
@@ -682,7 +699,7 @@ local function drawStatus(pet, maneuvers, overload)
     --    under the table both draw nothing from it.
     local buffs = config.show_gives and buffSummary(equippedAttachments(), maneuverCounts(), {}) or {}
     local cx = tm.elCols()
-    drawManeuverTable(rows, cx)
+    drawManeuverTable(rows, cx, hid)
     local mods = drawRecastColumn(cx, #rows + 1, buffs)
 
     if hasFire and hasAttachment('Flame Holder') then

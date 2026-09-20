@@ -40,6 +40,7 @@ local PERSIST = {
     show_ws           = { 'bool' },
     show_gives        = { 'bool' },
     show_oils         = { 'bool' },
+    show_idle_burden  = { 'bool' },
     sidebar           = { 'bool' },
     compact           = { 'bool' },
     ui_scale          = { 'int', 75, 200 },

@@ -104,6 +104,41 @@ do
     api.config.ui_scale = 100
     world.icons, world.timers = nil, nil
 
+    -- --------------------------------------------------- idle burden rows --
+    -- A row with no maneuver up and a 0% chance on the next one is in the
+    -- table only to carry its burden number. show_idle_burden off drops it.
+    -- A maneuver that IS up keeps its burden whatever the chance reads, and a
+    -- row that can still overload is never hidden.
+    local model, was = api.model(), {}
+    for _, el in ipairs({ 'Fire', 'Ice', 'Earth' }) do was[el] = model.burden[el] end
+    world.icons, world.timers = { 300 }, { 0 }      -- one Fire maneuver, nothing else
+    model.burden.Fire, model.burden.Ice, model.burden.Earth = 40, 1, 30
+    frame('idle burden shown')
+    check('the idle 0% row draws by default', sawExact('Ic'), true)
+    check('the idle row that can overload draws', sawExact('Ea'), true)
+    api.config.show_idle_burden = false
+    frame('idle burden hidden')
+    check('show_idle_burden off drops the 0% row', sawExact('Ic'), false)
+    check('show_idle_burden off keeps a row that can overload', sawExact('Ea'), true)
+    check('show_idle_burden off keeps the maneuver that is up', sawExact('Fi'), true)
+    -- the same element at 0%, but its maneuver is up: the row stays
+    model.burden.Fire, model.burden.Earth = 1, 1
+    frame('idle burden hidden, nothing left to show')
+    check('show_idle_burden off keeps a live maneuver at 0%', sawExact('Fi'), true)
+    check('show_idle_burden off drops the last idle row', sawExact('Ea'), false)
+    -- nothing up and every idle row hidden: the empty line may not claim
+    -- there is no burden, because there is - it is just harmless.
+    world.icons, world.timers = nil, nil
+    frame('idle burden hidden, nothing up')
+    check('the hidden-row empty line says no risk', sawExact('no maneuvers, no risk'), true)
+    check('the hidden-row empty line does not deny the burden', sawExact('no maneuvers, no burden'), false)
+    -- ...and with no burden at all it is the original line again
+    model.burden.Fire, model.burden.Ice, model.burden.Earth = 0, 0, 0
+    frame('idle burden hidden, nothing at all')
+    check('a truly empty table keeps its own line', sawExact('no maneuvers, no burden'), true)
+    api.config.show_idle_burden = true
+    for el, v in pairs(was) do model.burden[el] = v end
+
     api.selectSet('VE tank')
     frame('smoke saved')
     check('render saved cost', sawExact('Fi2'), true)
