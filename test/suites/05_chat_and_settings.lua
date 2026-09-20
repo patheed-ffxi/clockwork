@@ -134,15 +134,15 @@ do
     check('settings restored another bool', cfg.show_reasoning, false)
     check('settings restored an int', cfg.ui_scale, 120)
     -- the four line switches are on the whitelist too
-    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.show_idle_burden = false, false, false, false
+    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows = false, false, false, true
     api.saveSettings()
-    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.show_idle_burden = true, true, true, true
+    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows = true, true, true, false
     api.loadSettings()
     check('settings restored show_ws', cfg.show_ws, false)
     check('settings restored show_gives', cfg.show_gives, false)
     check('settings restored show_oils', cfg.show_oils, false)
-    check('settings restored show_idle_burden', cfg.show_idle_burden, false)
-    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.show_idle_burden = true, true, true, true
+    check('settings restored hide_zero_ol_rows', cfg.hide_zero_ol_rows, true)
+    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows = true, true, true, false
 
     -- what the file actually holds: stable order, one key a line, and NOTHING
     -- from the model. A calibration constant in here is the bug this guards.

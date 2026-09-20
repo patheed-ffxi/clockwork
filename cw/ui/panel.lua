@@ -415,8 +415,8 @@ tm.settingsTab = function()
            'The gives list on the Status tab: what your maneuvers are adding\nright now.')
     toggle('oil counts', 'show_oils',
            'The oils line on the Status tab, and its warning when you have none.')
-    toggle('harmless burden', 'show_idle_burden',
-           'Burden on an element with nothing up when another maneuver of it\nwould overload at 0%. Off hides those rows.')
+    toggle('hide burden at 0% OL', 'hide_zero_ol_rows',
+           'Drop the row for an element with nothing up when another maneuver\nof it would overload at 0%. A maneuver that is up keeps its burden.')
     toggle('what-if sidebar', 'sidebar',
            'A second window: what using each maneuver now would change.',
            function() tm.sidebarInvalidate() end)
@@ -542,8 +542,8 @@ local function maneuverRows(maneuvers)
         if burden[el] > 0 and not seen[el] then
             local p, after = predict(el)
             -- Nothing up and nothing at risk: every other cell in this row is
-            -- a dash, so the burden number is the whole row (show_idle_burden).
-            if p == 0 and not config.show_idle_burden then
+            -- a dash, so the burden number is the whole row (hide_zero_ol_rows).
+            if p == 0 and config.hide_zero_ol_rows then
                 hid = true
             else
                 rows[#rows + 1] = { el = el, p = p, after = after }
@@ -689,7 +689,7 @@ local function drawStatus(pet, maneuvers, overload)
     -- 2. Maneuvers and burden describe the same eight elements, so
     --    they share one table: a row per live maneuver, oldest first
     --    (the next to drop), then a dim row for any element still
-    --    carrying burden with nothing up - unless show_idle_burden is off
+    --    carrying burden with nothing up - unless hide_zero_ol_rows is on
     --    and that burden cannot overload anything yet.
     local hasFire, rows, hid = maneuverRows(maneuvers)
 

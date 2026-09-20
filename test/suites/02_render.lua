@@ -106,7 +106,7 @@ do
 
     -- --------------------------------------------------- idle burden rows --
     -- A row with no maneuver up and a 0% chance on the next one is in the
-    -- table only to carry its burden number. show_idle_burden off drops it.
+    -- table only to carry its burden number. hide_zero_ol_rows drops it.
     -- A maneuver that IS up keeps its burden whatever the chance reads, and a
     -- row that can still overload is never hidden.
     local model, was = api.model(), {}
@@ -116,16 +116,16 @@ do
     frame('idle burden shown')
     check('the idle 0% row draws by default', sawExact('Ic'), true)
     check('the idle row that can overload draws', sawExact('Ea'), true)
-    api.config.show_idle_burden = false
+    api.config.hide_zero_ol_rows = true
     frame('idle burden hidden')
-    check('show_idle_burden off drops the 0% row', sawExact('Ic'), false)
-    check('show_idle_burden off keeps a row that can overload', sawExact('Ea'), true)
-    check('show_idle_burden off keeps the maneuver that is up', sawExact('Fi'), true)
+    check('hide_zero_ol_rows drops the 0% row', sawExact('Ic'), false)
+    check('hide_zero_ol_rows keeps a row that can overload', sawExact('Ea'), true)
+    check('hide_zero_ol_rows keeps the maneuver that is up', sawExact('Fi'), true)
     -- the same element at 0%, but its maneuver is up: the row stays
     model.burden.Fire, model.burden.Earth = 1, 1
     frame('idle burden hidden, nothing left to show')
-    check('show_idle_burden off keeps a live maneuver at 0%', sawExact('Fi'), true)
-    check('show_idle_burden off drops the last idle row', sawExact('Ea'), false)
+    check('hide_zero_ol_rows keeps a live maneuver at 0%', sawExact('Fi'), true)
+    check('hide_zero_ol_rows drops the last idle row', sawExact('Ea'), false)
     -- nothing up and every idle row hidden: the empty line may not claim
     -- there is no burden, because there is - it is just harmless.
     world.icons, world.timers = nil, nil
@@ -136,7 +136,7 @@ do
     model.burden.Fire, model.burden.Ice, model.burden.Earth = 0, 0, 0
     frame('idle burden hidden, nothing at all')
     check('a truly empty table keeps its own line', sawExact('no maneuvers, no burden'), true)
-    api.config.show_idle_burden = true
+    api.config.hide_zero_ol_rows = false
     for el, v in pairs(was) do model.burden[el] = v end
 
     api.selectSet('VE tank')

@@ -131,11 +131,13 @@ local config =
     show_gives  = true,
     show_oils   = true,
     -- An element with no maneuver up whose next maneuver would overload at 0%
-    -- sits in the Status tab's table only to carry its burden number, and that
-    -- number is not a decision: it cannot cost anything until it climbs. Off
-    -- drops those rows. A maneuver that IS up keeps its burden whatever the
-    -- chance reads - that row is there for the maneuver, not for the burden.
-    show_idle_burden = true,
+    -- is in the Status tab's table only to carry its burden number, and that
+    -- number is not a decision: it cannot cost anything until it climbs. On,
+    -- those rows are dropped. The one switch here that HIDES rather than shows,
+    -- which is why it ships false: a maneuver that IS up keeps its burden
+    -- whatever the chance reads - that row is there for the maneuver, not for
+    -- the burden - and a row that can still overload is never hidden.
+    hide_zero_ol_rows = false,
     -- The HUD's typeface: two files under C:\Windows\Fonts, loaded once on the
     -- load event and never in a frame (tm.fontLoad). A missing file falls back
     -- to ImGui's own font at the same sizes. Segoe UI ships its semibold as a

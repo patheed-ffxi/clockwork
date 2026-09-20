@@ -18,7 +18,8 @@ prediction did *not* match the server, so the model can be corrected from real p
   create, and how long an overload would last. The threshold is read off the gear you are
   actually wearing, so a Fire maneuver in Puppetry Dastanas resolves at a different number
   than a Water maneuver in Devotee's Mitts. An element with nothing up that cannot
-  overload anything yet can be hidden from the table (**harmless burden**, Settings tab).
+  overload anything yet can be hidden from the table (**hide burden at 0% OL**, Settings
+  tab).
 - **Maneuver slots and decay.** What is up, how long each has left, and the real decay
   rate — the Heatsink behaviour this model assumes for Horizon, not upstream's.
 - **Weaponskill prediction.** What the automaton will use next, and why, with skillchain
