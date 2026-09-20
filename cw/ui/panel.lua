@@ -16,6 +16,7 @@ local petInfo, hasAttachment, oilCounts, equippedAttachments = R.petInfo, R.hasA
 local B  = require('cw.burden')
 local computeCost, predict, overloadDuration, meanAbsError = B.computeCost, B.predict, B.overloadDuration, B.meanAbsError
 local activeManeuvers, maneuverCounts, decayRate, predictWS = B.activeManeuvers, B.maneuverCounts, B.decayRate, B.predictWS
+local costLadder = B.costLadder
 local P  = require('cw.pet')
 local resetModel = P.resetModel
 local SF = require('cw.ui.surface')
@@ -772,6 +773,7 @@ local function drawTuningCost()
     -- to lose is worth more before the maneuver is used than after it,
     -- and a list of only the elements in play would show nothing at all
     -- at rest.
+    tm.text('label', COL_DIM, '  cost of the 1st / 2nd / 3rd')
     for _, el in ipairs(ELEMENTS) do
         local lo = (el == 'Dark') and 10 or 15
         local _, mine, theirs = computeCost(el, castStat[el])
@@ -780,14 +782,22 @@ local function drawTuningCost()
         tm.text('text', COL_DIM, ('%s %s'):format(
             MANEUVER_STAT[el] or '?',
             (mine and theirs) and ('%d v %d'):format(mine, theirs) or '?'))
-        imgui.SameLine(tm.s(168), 0)
-        tm.text('text', (cost[el] ~= lo) and COL_BAD or COL_GOOD, ('cost %d'):format(cost[el]))
-        imgui.SameLine(tm.s(228), 0)
+        -- All three uses, not only the next one: each maneuver raises the
+        -- automaton's own stat, so a check won bare can be lost by the third
+        -- and the answer is wanted before the first. costLadder() holds why.
+        local ladder = costLadder(el)
+        for k = 1, 3 do
+            if k == 1 then imgui.SameLine(tm.s(168), 0) else imgui.SameLine(0, tm.s(5)) end
+            local c = ladder[k]
+            tm.text('text', (c == nil) and COL_DIM or (c ~= lo) and COL_BAD or COL_GOOD,
+                    (c == nil) and '?' or tostring(c))
+        end
+        imgui.SameLine(tm.s(240), 0)
         -- The stored source token, in words (tm.costWord); the
         -- tooltip below spells all five out.
         tm.text('text', COL_DIM, tm.costWord(costSource[el]))
     end
-    tip('Beat the automaton\'s stat and the maneuver costs 15 burden; lose and\nit costs 20. Dark compares MP, at 10 and 15. Green is the low cost.\nYour side is the stat you wore when that element last resolved, so a\n? means you have not used it yet. A gear-swap set\'s stats never reach the\nclient at all: /cw stat wind 83 tells it what you really wear.\n\nWhere the cost came from: from the server (what it charged), learned\n(inferred over several uses), your setting (/cw stat), from your last\nuse (your stats then), from your gear now (a guess off what you are\nwearing), assumed (stats unreadable), forced (set in the config).')
+    tip('Beat the automaton\'s stat and the maneuver costs 15 burden; lose and\nit costs 20. Dark compares MP, at 10 and 15. Green is the low cost.\nThe three numbers are the 1st, 2nd and 3rd maneuver of that element:\neach one raises the automaton\'s own stat, so a check won bare can be\nlost by the third. The step you are on is the model\'s own cost; ? is a\nstep with nothing to compare.\n\nYour side is the stat you wore when that element last resolved, so a\n? there means you have not used it yet. A gear-swap set\'s stats never\nreach the client at all: /cw stat wind 83 tells it what you really wear.\n\nWhere the cost came from: from the server (what it charged), learned\n(inferred over several uses), your setting (/cw stat), from your last\nuse (your stats then), from your gear now (a guess off what you are\nwearing), assumed (stats unreadable), forced (set in the config).')
 end
 
 -- The Tuning tab body. Everything it reads is module scope or on tm.

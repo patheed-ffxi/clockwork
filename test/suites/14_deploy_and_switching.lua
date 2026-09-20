@@ -207,6 +207,48 @@ do
     frame('cost view with a set stat')
     check('the cost column says whose it is', saw('your setting'), true)
     check('...against the stat you set', saw('AGI 83 v 80'), true)
+    check('the row paints the three uses bare', sawExact('20'), true)
+
+    -- ...and all three uses of the element, not only the next one. Every
+    -- maneuver raises the automaton's own stat by the grant (6 at 75, bare
+    -- hands), so 83 beats the bare 80 and loses to the 86 and 92 that its own
+    -- first and second maneuvers put it at.
+    local ladder = api.costLadder('Wind')
+    check('the ladder costs the 1st use', ladder[1], 15)
+    check('...the 2nd', ladder[2], 20)
+    check('...and the 3rd', ladder[3], 20)
+
+    -- the case the ladder exists for: a stat that carries two and not three
+    handlers['command']({ command = '/cw stat wind 88' })
+    ladder = api.costLadder('Wind')
+    check('88 wins the 1st', ladder[1], 15)
+    check('...and the 2nd', ladder[2], 15)
+    check('...but loses the 3rd', ladder[3], 20)
+
+    -- with one already up the automaton reads 6 higher, and the ladder must
+    -- NOT move with it: it is taken off the bare stat, so the row says the same
+    -- thing before and during a stack
+    world.icons, world.timers = { 302 }, { 0 }
+    send044({ head = 2, frame = 33, stats = { AGI = 86 } })
+    handlers['d3d_present']()
+    ladder = api.costLadder('Wind')
+    check('one up does not shift the 1st', ladder[1], 15)
+    check('...nor the 2nd', ladder[2], 15)
+    check('...nor the 3rd', ladder[3], 20)
+    check('...and the step you are on is the model\'s own cost', ladder[2], m.cost.Wind)
+
+    -- no automaton data: the step you are on still answers, the projections
+    -- have nothing to project from
+    api.clear044()
+    handlers['d3d_present']()
+    ladder = api.costLadder('Wind')
+    check('the step you are on survives no 0x044', ladder[2], m.cost.Wind)
+    check('...and the others go blank', (ladder[1] == nil) and (ladder[3] == nil), true)
+
+    world.icons, world.timers = nil, nil
+    send044({ head = 2, frame = 33, stats = { AGI = 80 } })
+    handlers['d3d_present']()
+    handlers['command']({ command = '/cw stat wind 83' })
 
     -- stacked: the automaton's AGI climbs past the number and it loses again,
     -- which is the whole reason this is a number and not a verdict
