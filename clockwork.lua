@@ -1,6 +1,6 @@
 addon.name    = 'clockwork'
 addon.author  = 'Pathead'
-addon.version = '1.17.25'
+addon.version = '1.18.0'
 addon.desc    = 'Puppetmaster burden, maneuvers, weaponskill prediction, loadout and anomaly logging.'
 
 require('common')
