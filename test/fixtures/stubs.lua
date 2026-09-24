@@ -409,6 +409,7 @@ local player = permissive({
     GetSubJob  = function() return world.subjob end,
     GetMainJobLevel = function() return world.mainlvl end,
     GetSubJobLevel  = function() return world.sublvl end,
+    HasAbility = function(_, id) return world.abilities[id] == true end,
     -- The master's stats as the CLIENT holds them - 0-based, STR..CHR - which
     -- is what the addon reads when you have not told it what a maneuver set
     -- puts on you. Unset is 0, the permissive stub's old answer.
@@ -430,6 +431,12 @@ AshitaCore = {
     GetMemoryManager = function()
         return {
             GetPlayer = function() return player end,
+            -- the ability recast table, from world.recast; permissive, so any
+            -- other IRecast name the addon reaches for still raises
+            GetRecast = function() return permissive({
+                GetAbilityTimerId = function(_, i) return (world.recast[i] or { 0, 0 })[1] end,
+                GetAbilityTimer   = function(_, i) return (world.recast[i] or { 0, 0 })[2] end,
+            }) end,
             GetEntity = function() return permissive({
                 -- Per index, not one name for the whole table: the header's
                 -- target row names the MOB while the line above it names the

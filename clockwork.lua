@@ -16,6 +16,7 @@ local tm     = require('cw.state')
 local U      = require('cw.util')
 local L      = require('cw.log')
 require('cw.reading')
+require('cw.cooldowns')  -- publishes tm.jaList and tm.jaRefresh
 require('cw.attachments')
 require('cw.burden')
 require('cw.timers')

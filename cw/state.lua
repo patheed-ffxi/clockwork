@@ -11,11 +11,11 @@ local config = require('cw.config')
 --   castThresh, castStat, castBonus, seededBy, lastReconcile, waterSince.
 -- Everything else is read as tm.x at every use: every value; every table a
 -- reset REPLACES with a fresh one (petKnown, mobs, touched, petUntil, petDiaBio,
--- regenAt, usedAt, gaps, windowAt, spellRecast, rows); and every record replaced
--- whole on each update (auto044, resonance, fhPending, applyState, spell, demo,
--- partyBuffs, partyNow).
+-- regenAt, usedAt, gaps, windowAt, spellRecast, rows, jaRows); and every record
+-- replaced whole on each update (auto044, resonance, fhPending, applyState,
+-- spell, demo, partyBuffs, partyNow).
 -- An alias of one of those goes stale at its first replacement.
-local tm = { usedAt = {}, gaps = {}, model = {}, modelKnown = {}, rows = {}, edgeAt = nil,
+local tm = { usedAt = {}, gaps = {}, model = {}, modelKnown = {}, rows = {}, jaRows = {}, edgeAt = nil,
              windowAt = {}, spellRecast = {},
              -- Effects on every mob the battle traffic has named, keyed by the
              -- mob's ServerId and then by effect id:

@@ -66,6 +66,10 @@ local api = (function()
         scProps = function(kind, id) return (kind == 'ws') and D.WS_SC[id] or D.MOBSKILL_SC[id] end,
         timerRows = function() return tm.timerRows() end,
         timersClear = function(edge, src) T.timersClear(edge, src) end,
+        -- your own job abilities (cw/cooldowns.lua): the refresh frame.tick
+        -- runs, answering the rows it wrote, and the table it reads from
+        jaRefresh = function() tm.jaRefresh() return tm.jaRows end,
+        jaList = function() return tm.jaList end,
         currentHead = function() return tm.currentHead() end,
         spellName = function(id) return tm.spellName(id) end,
         canCast = function(id) return tm.fn.canCast(id) end,

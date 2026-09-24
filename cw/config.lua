@@ -138,6 +138,24 @@ local config =
     -- whatever the chance reads - that row is there for the maneuver, not for
     -- the burden - and a row that can still overload is never hidden.
     hide_zero_ol_rows = false,
+    -- Your own job abilities' recasts, listed under the automaton's in the
+    -- Status tab's recast column (cw/cooldowns.lua): a switch for each, and one
+    -- that leaves an ability out while it is ready. That one ships on, so the
+    -- column looks as it did before this existed until something goes on
+    -- recast; off, every ability switched on is listed all the time. The
+    -- Settings tab's ability cooldowns block sets all twelve.
+    cd_hide_ready    = true,
+    cd_activate      = true,
+    cd_dea           = true,
+    cd_repair        = true,
+    cd_maintenance   = true,
+    cd_maneuver      = true,
+    cd_role_reversal = true,
+    cd_ventriloquy   = true,
+    cd_deploy        = true,
+    cd_retrieve      = true,
+    cd_deactivate    = true,
+    cd_overdrive     = true,
     -- The HUD's typeface: two files under C:\Windows\Fonts, loaded once on the
     -- load event and never in a frame (tm.fontLoad). A missing file falls back
     -- to ImGui's own font at the same sizes. Segoe UI ships its semibold as a
