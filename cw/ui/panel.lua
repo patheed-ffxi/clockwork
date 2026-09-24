@@ -349,6 +349,27 @@ local function toggle(text, key, hint, after)
     tm.text('text', COL_TEXT, text)
 end
 
+-- A disclosure row in toggle()'s shape: a 12 px box holding a minus, which
+-- gains an upright while shut, and the caption beside it. Hand-drawn for the
+-- reason toggle() is - a stock CollapsingHeader would bring ImGui's own font
+-- and its header bar into a panel drawn in neither. Answers true on a click.
+local function disclosure(text, id, open, hint)
+    local sz = tm.s(12)
+    local x, y = imgui.GetCursorScreenPos()
+    local hit = imgui.InvisibleButton(text .. '##' .. id, { sz, sz })
+    if hint ~= nil then tip(hint) end
+    local dl, c = imgui.GetWindowDrawList(), tm.u32(COL_DIM)
+    local m, t = tm.s(3), tm.s(1)
+    dl:AddRect({ x, y }, { x + sz, y + sz }, c, tm.s(2))
+    dl:AddRectFilled({ x + m, y + sz / 2 - t }, { x + sz - m, y + sz / 2 + t }, c)
+    if not open then
+        dl:AddRectFilled({ x + sz / 2 - t, y + m }, { x + sz / 2 + t, y + sz - m }, c)
+    end
+    imgui.SameLine(0, tm.s(6))
+    tm.text('label', COL_DIM, text)
+    return hit
+end
+
 -- A percentage TYPED, not dragged. The buffer holds what is DISPLAYED - `100%`
 -- - so the box reads as the thing it sets rather than as a bare number, and the
 -- value lands on Enter: a drag would make every number between here and there
@@ -391,6 +412,10 @@ local function percentBox(text, key, lo, hi, hint)
     if hint ~= nil then tip(hint) end
 end
 
+-- The ability-cooldowns block, open or shut for this session only: it is where
+-- the block is, not a setting.
+local cdOpen = false
+
 tm.settingsTab = function()
     -- two columns: logging, then display, each 172 px of the panel's 364
     imgui.BeginGroup()
@@ -427,6 +452,27 @@ tm.settingsTab = function()
     percentBox('warn at', 'warn_at', 1, 100,
                'Overload chance at which the OL% column turns red. Type a number\nand press Enter.')
     imgui.EndGroup()
+
+    -- your own abilities' recasts: set once, so folded away until wanted
+    imgui.Separator()
+    if disclosure('ability cooldowns', 'cw_cdopen', cdOpen,
+                  'Your own job abilities in the Status tab\'s recast column, under\nthe automaton\'s: which ones, and whether a ready one is listed.') then
+        cdOpen = not cdOpen
+    end
+    if cdOpen then
+        toggle('hide when ready', 'cd_hide_ready',
+               'List an ability only while it is on recast. Off lists every one\nswitched on below, ready or not.')
+        -- two groups side by side, as logging and display sit above
+        local list = tm.jaList
+        local half = math.ceil(#list / 2)
+        imgui.BeginGroup()
+        for i = 1, half do toggle(list[i].name, 'cd_' .. list[i].key) end
+        imgui.EndGroup()
+        imgui.SameLine(hudPad() + tm.s(180), 0)
+        imgui.BeginGroup()
+        for i = half + 1, #list do toggle(list[i].name, 'cd_' .. list[i].key) end
+        imgui.EndGroup()
+    end
 
     imgui.Separator()
     tm.text('label', COL_DIM, 'model')

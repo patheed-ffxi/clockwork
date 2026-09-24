@@ -151,3 +151,59 @@ do
     world.recast = {}
     frame('ja: column done')
 end
+
+-- The switches persist like every other Settings-tab switch, and live behind
+-- a disclosure row that starts shut.
+do
+    local c = api.config
+    local path = api.settingsPath()
+
+    c.cd_hide_ready, c.cd_repair, c.cd_overdrive = false, false, false
+    api.saveSettings()
+    c.cd_hide_ready, c.cd_repair, c.cd_overdrive = true, true, true
+    api.loadSettings()
+    check('hide when ready is saved', c.cd_hide_ready, false)
+    check('an ability switch is saved', c.cd_repair, false)
+    check('...the last in the list too', c.cd_overdrive, false)
+    local f = assert(io.open(path, 'r'))
+    local text = f:read('*a')
+    f:close()
+    check('the file names the switch', text:find('cd_repair = false', 1, true) ~= nil, true)
+
+    -- true beforehand, deliberately: a mutant coercing 'maybe' to false would
+    -- be invisible against a switch that was already off
+    f = assert(io.open(path, 'w'))
+    f:write('cd_repair = maybe\n')
+    f:close()
+    c.cd_repair = true
+    api.loadSettings()
+    check('a junk value keeps the live switch', c.cd_repair, true)
+
+    c.cd_hide_ready, c.cd_overdrive = false, false
+    api.restoreDefaults()
+    check('restore turns hide when ready back on', c.cd_hide_ready, true)
+    check('restore switches an ability back on', c.cd_overdrive, true)
+    suiteLogging()
+
+    -- the block: shut, then open, then a switch in it, then shut again
+    frame('ja: settings shut')
+    check('the disclosure row is drawn', saw('BTN:ability cooldowns##cw_cdopen'), true)
+    check('...shut, with no ability switch', saw('BTN:Repair##cw_set_cd_repair'), false)
+    clicks['ability cooldowns##cw_cdopen'] = true
+    frame('ja: settings open')
+    check('open, it holds hide when ready', saw('BTN:hide when ready##cw_set_cd_hide_ready'), true)
+    check('...the first ability', saw('BTN:Activate##cw_set_cd_activate'), true)
+    check('...and the last', saw('BTN:Overdrive##cw_set_cd_overdrive'), true)
+    local saves = api.saveCount()
+    clicks['Repair##cw_set_cd_repair'] = true
+    frame('ja: Repair switched off')
+    check('a click switches it off', c.cd_repair, false)
+    check('...and writes the file once', api.saveCount(), saves + 1)
+    clicks['ability cooldowns##cw_cdopen'] = true
+    frame('ja: settings shut again')
+    check('a second click shuts it', saw('BTN:Repair##cw_set_cd_repair'), false)
+
+    api.restoreDefaults()
+    suiteLogging()
+    world.abilities, world.recast = {}, {}
+end
