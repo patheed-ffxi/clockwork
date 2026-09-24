@@ -372,20 +372,35 @@ end
 -- the same on the footer; what does not fit is returned for the caller.
 tm.sideColumn = function(lines, buffs)
     local left = {}
+    -- one label width for both groups, so every value in the column ends level
     local labelW = 0
-    for _, r in ipairs(tm.rows) do
-        local w = tm.width('label', r.label)
-        if w > labelW then labelW = w end
+    for _, group in ipairs({ tm.rows, tm.jaRows }) do
+        for _, r in ipairs(group) do
+            local w = tm.width('label', r.label)
+            if w > labelW then labelW = w end
+        end
     end
     for _, r in ipairs(tm.rows) do
         tm.recastCell(r, labelW)
+    end
+    -- Your own abilities go UNDER the automaton's, and only they are headed.
+    -- With hide-when-ready on they come and go all fight, and below the
+    -- automaton's cells that moves only where the column ends. Above them, or
+    -- under an `automaton` heading that appeared with them, every automaton
+    -- cell would jump a line each time.
+    local used = #tm.rows
+    if #tm.jaRows > 0 then
+        tm.text('label', COL_DIM, 'you')
+        tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, ability cooldowns.')
+        for _, r in ipairs(tm.jaRows) do tm.jaCell(r, labelW) end
+        used = used + #tm.jaRows + 1
     end
     -- The deltas go here or on the footer line, never half in each: room
     -- for the `gives` label but not for what it labels is not room, and
     -- dividing them would draw the label in both places, since the footer
     -- line brings its own.
     if #buffs > 0 then
-        if lines - #tm.rows < #buffs + 1 then
+        if lines - used < #buffs + 1 then
             left[#left + 1] = { kind = 'label' }
             for _, b in ipairs(buffs) do left[#left + 1] = { kind = 'buff', mod = b } end
             return left
@@ -833,6 +848,24 @@ tm.recastCell = function(r, labelW)
     tm.text('text', (r.state == 'ready') and COL_GOOD or (r.state == 'counting') and COL_TEXT or COL_DIM, txt)
     tip(('%s: %ds recast. Ready means usable, not that it is about to\nfire. ? = not used since the addon loaded.')
         :format(r.name, r.model))
+end
+-- One of your own abilities, for the `you` group: the recast cell's shape
+-- without its icon and without its model. The client has no bitmap for a job
+-- ability (IAbility carries a ListIconId and nothing loadable), so the plain
+-- square; and the time is the client's own, so there is no `?` to explain.
+tm.jaCell = function(r, labelW)
+    tm.square(r.state, 0)
+    imgui.SameLine(0, tm.s(3))
+    tm.text('label', COL_DIM, r.label)
+    imgui.SameLine(0, tm.s(4) + math.max(0, (labelW or 0) - tm.width('label', r.label)))
+    if r.state == 'counting' then
+        local left = tm.fmtLeft(r.remaining)
+        tm.text('text', COL_TEXT, left)
+        tip(('%s: %s left.'):format(r.name, left))
+    else
+        tm.text('text', COL_GOOD, 'ready')
+        tip(('%s: ready.'):format(r.name))
+    end
 end
 
 -- The maneuver table's column origins, as absolute SameLine offsets rather

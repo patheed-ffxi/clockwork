@@ -78,3 +78,76 @@ do
     world.abilities = known
     api.resetSwallowed()
 end
+
+-- The `you` group in the recast column: under the automaton's cells, the only
+-- group with a heading, sharing their label width, and counted in the spill.
+do
+    local c = api.config
+    local function at(text)
+        for i, d in ipairs(drawn) do if d == text then return i end end
+        return nil
+    end
+    learnAll()
+    c.cd_hide_ready = true
+
+    world.recast = {}
+    frame('ja: nothing counting')
+    check('nothing counting draws no you label', at('you'), nil)
+
+    world.recast = { [3] = { 206, 2820 } }        -- Repair, 47 s
+    frame('ja: Repair counting')
+    local auto = api.timerRows()
+    check('precondition: an automaton cell is drawn',
+          #auto > 0 and at(auto[1].label) ~= nil, true)
+    check('a counting ability brings the you label', at('you') ~= nil, true)
+    check('...its label', at('Repair') ~= nil, true)
+    check('...and its seconds', at('47s') ~= nil, true)
+    local lastAuto = 0
+    for _, r in ipairs(auto) do
+        local i = at(r.label)
+        if i ~= nil and i > lastAuto then lastAuto = i end
+    end
+    check('every automaton cell comes before the you group', lastAuto < (at('you') or 0), true)
+    check('...and the you label before its rows', (at('you') or 1e9) < (at('Repair') or 0), true)
+
+    c.cd_hide_ready = false
+    world.recast = {}
+    frame('ja: all ready')
+    check('with hide when ready off, a ready ability is listed', at('Activate') ~= nil, true)
+    c.cd_hide_ready = true
+
+    -- One label width for the whole column: a long label in the you group pads
+    -- every automaton value too, so the seconds end level all the way down.
+    -- Repair counts beside Deactivate because its label is the shorter: the
+    -- widest label's own value sits at s(4) padded or not, so only a shorter
+    -- one shows the you cell honouring the width it is handed.
+    local tw = world.textWidth
+    world.textWidth = true
+    world.recast = { [3] = { 208, 600 }, [4] = { 206, 600 } }   -- Deactivate, Repair, 10 s
+    api.jaRefresh()
+    drawn = {}
+    api.sideColumn(#auto + 3, {})
+    local widest = #'Deactivate' * 7
+    for _, r in ipairs(auto) do
+        if #r.label * 7 > widest then widest = #r.label * 7 end
+    end
+    check('an automaton value is padded to the you group\'s widest label',
+          sawExact('SP:' .. tostring(api.s(4) + widest - #auto[1].label * 7)), true)
+    check('...and the you value to the same column',
+          sawExact('SP:' .. tostring(api.s(4) + widest - #'Repair' * 7)), true)
+    world.textWidth = tw
+
+    -- The spill counts the you group: room that held the deltas beside the
+    -- automaton's cells alone does not hold them under a you group too.
+    local buffs = { { 'ATT', '%', 16 } }
+    world.recast = {}
+    api.jaRefresh()
+    check('the deltas fit beside the automaton cells alone', #api.sideColumn(#auto + 2, buffs), 0)
+    world.recast = { [3] = { 206, 2820 } }
+    api.jaRefresh()
+    check('a you group sends them under the table', #api.sideColumn(#auto + 2, buffs), 2)
+    check('...and room for both keeps them', #api.sideColumn(#auto + 4, buffs), 0)
+
+    world.recast = {}
+    frame('ja: column done')
+end
