@@ -54,7 +54,7 @@ ashita.events.register('load', 'clockwork_load', function()
     -- the log.
     L.logEvent('load', { version = addon.version, pet = (tm.ids.pet_id ~= 0) })
     print(chat.header('clockwork'):append(chat.message(
-        'loaded. /cw show - /cw attachments - packet driven, ServerId filtered.')))
+        'loaded. /cw show - /cw attachments')))
 end)
 
 ashita.events.register('unload', 'clockwork_unload', function()
