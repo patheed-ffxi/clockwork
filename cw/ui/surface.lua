@@ -231,6 +231,10 @@ tm.tab = 'status'
 -- opened for - the error, the anomalies, the recast history - so it is
 -- the default; the per-element stat checks wait behind their button.
 tm.tuneTab = 'model'
+-- Settings is two views as well. `display` is what the tab is opened for -
+-- what the panel shows, your own recasts among it - so it is the default;
+-- `logging` holds what is written down and printed.
+tm.settingsView = 'display'
 -- The header's button row, right-aligned as a unit at the end of the name
 -- line: the lettered tabs, ? (the what-if window), C (compact), the cog
 -- (Settings) and x (close).
@@ -916,7 +920,7 @@ tm.jaGrid = function()
     local gap = tm.s(12)
     local cols = math.max(1, math.floor((hudInner() + gap) / (cell + gap)))
     tm.text('label', COL_DIM, 'you')
-    tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, ability cooldowns.')
+    tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, display.')
     for i, r in ipairs(rows) do
         local col = (i - 1) % cols
         if col > 0 then imgui.SameLine(hudPad() + col * (cell + gap), 0) end

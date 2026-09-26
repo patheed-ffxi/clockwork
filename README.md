@@ -29,7 +29,7 @@ prediction did *not* match the server, so the model can be corrected from real p
   from the client, each on a dial that sweeps down as it runs: Activate, Deus Ex
   Automata, Repair, Maneuver, Role Reversal, Ventriloquy, Overdrive and the rest. Each
   one can be switched off, and a ready one is left out unless you turn **hide when
-  ready** off (Settings tab, **ability cooldowns**).
+  ready** off (Settings tab, **display**).
 - **Loadout tab.** Head, frame and every attachment with its live modifier values, plus
   capacity per element. Saved attachment sets with a preview and a confirmed apply,
   paced a second a step as pupsets is.

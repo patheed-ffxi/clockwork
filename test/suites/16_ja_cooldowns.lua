@@ -106,12 +106,15 @@ end
 
 -- The `you` group: under the maneuver table rather than in the recast column,
 -- in equal columns as many to a line as the panel holds, each cell a dial.
+-- The Status tab alone: the Settings tab names every ability too, and in the
+-- harness's draw-everything mode its names would answer for the group's.
 do
     local c = api.config
     local function at(text)
         for i, d in ipairs(drawn) do if d == text then return i end end
         return nil
     end
+    api.selectTab('status')
     learnAll()
     c.cd_hide_ready = true
 
@@ -216,10 +219,11 @@ do
 
     world.recast = {}
     frame('ja: grid done')
+    api.selectTab('all')
 end
 
--- The switches persist like every other Settings-tab switch, and live behind
--- a disclosure row that starts shut.
+-- The switches persist like every other Settings-tab switch, and sit in the
+-- open on its display view.
 do
     local c = api.config
     local path = api.settingsPath()
@@ -251,23 +255,40 @@ do
     check('restore switches an ability back on', c.cd_overdrive, true)
     suiteLogging()
 
-    -- the block: shut, then open, then a switch in it, then shut again
-    frame('ja: settings shut')
-    check('the disclosure row is drawn', saw('BTN:ability cooldowns##cw_cdopen'), true)
-    check('...shut, with no ability switch', saw('BTN:Repair##cw_set_cd_repair'), false)
-    clicks['ability cooldowns##cw_cdopen'] = true
-    frame('ja: settings open')
-    check('open, it holds hide when ready', saw('BTN:hide when ready##cw_set_cd_hide_ready'), true)
+    -- Settings is two views, display and logging, and opens on display. The
+    -- Settings tab alone: the harness's draw-everything mode draws both.
+    api.selectTab('settings')
+    frame('ja: settings opens')
+    check('Settings opens on display', api.settingsView(), 'display')
+    check('...where the ability switches need no click', saw('BTN:Repair##cw_set_cd_repair'), true)
+    check('...with hide when ready', saw('BTN:hide when ready##cw_set_cd_hide_ready'), true)
     check('...the first ability', saw('BTN:Activate##cw_set_cd_activate'), true)
     check('...and the last', saw('BTN:Overdrive##cw_set_cd_overdrive'), true)
+    check('...beside the display switches', saw('BTN:oil counts##cw_set_show_oils'), true)
+    check('...and the scale box', saw('TXT:scale##cw_set_ui_scale'), true)
+    check('...but no logging switch', saw('BTN:write a log file##cw_set_logging'), false)
+    check('...and no fold-away row', saw('cw_cdopen'), false)
+    check('the model button is on display', saw('BTN:Zero burden##cw_set_sync'), true)
+    check('...and so is restore', saw('BTN:Restore defaults##cw_set_defaults'), true)
     local saves = api.saveCount()
     clicks['Repair##cw_set_cd_repair'] = true
     frame('ja: Repair switched off')
     check('a click switches it off', c.cd_repair, false)
     check('...and writes the file once', api.saveCount(), saves + 1)
-    clicks['ability cooldowns##cw_cdopen'] = true
-    frame('ja: settings shut again')
-    check('a second click shuts it', saw('BTN:Repair##cw_set_cd_repair'), false)
+
+    clicks['logging##cw_settings'] = true
+    frame('ja: the logging view')
+    check('the logging button shows the logging view', api.settingsView(), 'logging')
+    check('...with its switches', saw('BTN:write a log file##cw_set_logging'), true)
+    check('...the last of them too', saw('BTN:predictions to chat##cw_set_debug_predictions'), true)
+    check('...and no display switch', saw('BTN:oil counts##cw_set_show_oils'), false)
+    check('...nor an ability one', saw('BTN:Repair##cw_set_cd_repair'), false)
+    check('the model button is on logging too', saw('BTN:Zero burden##cw_set_sync'), true)
+    check('...and so is restore', saw('BTN:Restore defaults##cw_set_defaults'), true)
+    clicks['display##cw_settings'] = true
+    frame('ja: back to display')
+    check('the display button shows display again', saw('BTN:Repair##cw_set_cd_repair'), true)
+    api.selectTab('all')
 
     api.restoreDefaults()
     suiteLogging()

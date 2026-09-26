@@ -151,6 +151,7 @@ local api = (function()
         cog = function(x, y, r, c) return tm.cog(x, y, r, c) end,
         tuneTab = function() return tm.tuneTab end,
         selectTuneTab = function(t) tm.tuneTab = t end,
+        settingsView = function() return tm.settingsView end,
         sideColumn = function(lines, buffs) return tm.sideColumn(lines, buffs) end,
         fontLoad = function() return tm.fontLoad() end, px = function(k) return tm.px(k) end,
         -- the scaling primitives: px is a font BASE, s is a drawn pixel
