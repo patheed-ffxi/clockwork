@@ -164,6 +164,12 @@ local drawList = {
     AddRectFilledMultiColor = function() drawn[#drawn + 1] = 'RECT' end,
     AddRect                 = function() drawn[#drawn + 1] = 'RECT' end,
     AddCircleFilled         = function() drawn[#drawn + 1] = 'CIRC' end,
+    AddCircle               = function() drawn[#drawn + 1] = 'RING' end,
+    -- a filled path: the recast dial's wedge is the only one drawn
+    PathClear               = function() end,
+    PathLineTo              = function() end,
+    PathArcTo               = function() end,
+    PathFillConvex          = function() drawn[#drawn + 1] = 'WEDGE' end,
     AddImage                = function(_, tex) drawn[#drawn + 1] = 'IMG:' .. tostring(tex) end,
 }
 local OPENS = { Begin = true, BeginChild = true, BeginTable = true, BeginTabBar = true,

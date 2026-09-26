@@ -52,6 +52,13 @@ local function recastLeft()
     return left
 end
 
+-- How long each recast is, by timer id. The client says only what is left,
+-- but this runs every frame, so the first value seen after a use is the whole
+-- recast - merits and gear included - and the most seen since is kept until
+-- the ability is ready again. After a reload mid-recast the first value seen
+-- is part of one, so that recast's dial starts full.
+local longest = {}
+
 -- Render thread, once a frame from frame.tick, below its visibility gates:
 -- this is display only, so it has no reason to run with the window down. One
 -- safe() round the lot, so a failed read is an empty group and one count in
@@ -59,13 +66,19 @@ end
 tm.jaRefresh = function()
     tm.jaRows = safe(function()
         local left, p, rows = recastLeft(), player(), {}
+        for timer in pairs(longest) do
+            if left[timer] == nil then longest[timer] = nil end
+        end
+        for timer, rem in pairs(left) do
+            if rem > (longest[timer] or 0) then longest[timer] = rem end
+        end
         for _, ja in ipairs(tm.jaList) do
             local rem = left[ja.timer]
             if config['cd_' .. ja.key] and p:HasAbility(JA_RESOURCE + ja.ability)
                and (rem ~= nil or not config.cd_hide_ready) then
                 rows[#rows + 1] = { key = ja.key, label = ja.label, name = ja.name,
                                     state = (rem ~= nil) and 'counting' or 'ready',
-                                    remaining = rem }
+                                    remaining = rem, total = longest[ja.timer] }
             end
         end
         return rows

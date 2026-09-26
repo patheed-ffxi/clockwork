@@ -79,8 +79,33 @@ do
     api.resetSwallowed()
 end
 
--- The `you` group in the recast column: under the automaton's cells, the only
--- group with a heading, sharing their label width, and counted in the spill.
+-- How long each recast is, which the client never says: the most time left
+-- seen on it since it started counting, forgotten once it is ready.
+do
+    local c = api.config
+    learnAll()
+    c.cd_hide_ready = true
+    world.recast = {}
+    api.jaRefresh()
+    world.recast = { [3] = { 206, 90 * 60 } }     -- Repair, first seen at 90 s
+    local r = api.jaRefresh()[1]
+    check('first sight of a recast is its length', r and r.total, 90)
+    world.recast = { [3] = { 206, 45 * 60 } }
+    r = api.jaRefresh()[1]
+    check('...kept as it runs down', r and r.total, 90)
+    check('...beside what is left', r and r.remaining, 45)
+    world.recast = {}
+    api.jaRefresh()
+    world.recast = { [3] = { 206, 30 * 60 } }
+    r = api.jaRefresh()[1]
+    check('once ready it is forgotten: the next recast is its own length', r and r.total, 30)
+    c.cd_hide_ready = false
+    world.recast = {}
+    check('a ready ability has no length', (api.jaRefresh()[1] or {}).total, nil)
+end
+
+-- The `you` group: under the maneuver table rather than in the recast column,
+-- in equal columns as many to a line as the panel holds, each cell a dial.
 do
     local c = api.config
     local function at(text)
@@ -108,48 +133,89 @@ do
         if i ~= nil and i > lastAuto then lastAuto = i end
     end
     check('every automaton cell comes before the you group', lastAuto < (at('you') or 0), true)
-    check('...and the you label before its rows', (at('you') or 1e9) < (at('Repair') or 0), true)
+    check('...and the you label before its cells', (at('you') or 1e9) < (at('Repair') or 0), true)
+
+    -- The column is the automaton's alone again: none of your cells in it,
+    -- and the deltas it holds are the ones it held before the group existed.
+    drawn = {}
+    local buffs = { { 'ATT', '%', 16 } }
+    check('the deltas fit beside the automaton cells with you counting',
+          #api.sideColumn(#auto + 2, buffs), 0)
+    check('...and the column draws none of your cells', at('Repair'), nil)
+    check('...nor the you label', at('you'), nil)
 
     c.cd_hide_ready = false
     world.recast = {}
     frame('ja: all ready')
     check('with hide when ready off, a ready ability is listed', at('Activate') ~= nil, true)
-    c.cd_hide_ready = true
 
-    -- One label width for the whole column: a long label in the you group pads
-    -- every automaton value too, so the seconds end level all the way down.
-    -- Repair counts beside Deactivate because its label is the shorter: the
-    -- widest label's own value sits at s(4) padded or not, so only a shorter
-    -- one shows the you cell honouring the width it is handed.
+    -- Equal columns, as many as the panel's inner width holds: each cell is
+    -- the dial, the widest label showing, and a value slot for 00:00 or ready.
     local tw = world.textWidth
     world.textWidth = true
-    world.recast = { [3] = { 208, 600 }, [4] = { 206, 600 } }   -- Deactivate, Repair, 10 s
+    local s, pad, gap = api.s, api.s(8), api.s(12)
+    local inner = s(c.base_width) - pad * 2
+    local function cellW(widest)
+        return (api.dpx('text') - s(2)) + s(3) + widest + s(4) + #'00:00' * 7
+    end
+    api.jaRefresh()                               -- all eleven, all ready
+    drawn = {}
+    api.jaGrid()
+    local cell = cellW(#'Deactivate' * 7)
+    local cols = math.floor((inner + gap) / (cell + gap))
+    check('precondition: more than one column and fewer than eleven', cols > 1 and cols < 11, true)
+    check('the second cell sits in the second column', sawExact('X:' .. tostring(pad + cell + gap)), true)
+    check('...the last column is the one the width holds',
+          sawExact('X:' .. tostring(pad + (cols - 1) * (cell + gap))), true)
+    check('...and there is none past it', sawExact('X:' .. tostring(pad + cols * (cell + gap))), false)
+    local xs = 0
+    for _, d in ipairs(drawn) do if d:find('^X:') then xs = xs + 1 end end
+    check('the first cell of each line starts it, the rest are placed', xs, 11 - math.ceil(11 / cols))
+
+    -- the widths follow what is showing: two short labels, narrower columns
+    c.cd_hide_ready = true
+    world.recast = { [3] = { 206, 600 }, [7] = { 207, 600 } }   -- Repair, Deploy
     api.jaRefresh()
     drawn = {}
-    api.sideColumn(#auto + 3, {})
-    local widest = #'Deactivate' * 7
-    for _, r in ipairs(auto) do
-        if #r.label * 7 > widest then widest = #r.label * 7 end
-    end
-    check('an automaton value is padded to the you group\'s widest label',
-          sawExact('SP:' .. tostring(api.s(4) + widest - #auto[1].label * 7)), true)
-    check('...and the you value to the same column',
-          sawExact('SP:' .. tostring(api.s(4) + widest - #'Repair' * 7)), true)
+    api.jaGrid()
+    check('shorter labels showing make narrower columns',
+          sawExact('X:' .. tostring(pad + cellW(#'Repair' * 7) + gap)), true)
     world.textWidth = tw
 
-    -- The spill counts the you group: room that held the deltas beside the
-    -- automaton's cells alone does not hold them under a you group too.
-    local buffs = { { 'ATT', '%', 16 } }
+    -- The dial: a dark disc, and over it a wedge for the part of the recast
+    -- left - two halves past half, so each stays convex. A green disc when ready.
     world.recast = {}
     api.jaRefresh()
-    check('the deltas fit beside the automaton cells alone', #api.sideColumn(#auto + 2, buffs), 0)
-    world.recast = { [3] = { 206, 2820 } }
+    world.recast = { [3] = { 206, 90 * 60 } }
     api.jaRefresh()
-    check('a you group sends them under the table', #api.sideColumn(#auto + 2, buffs), 2)
-    check('...and room for both keeps them', #api.sideColumn(#auto + 4, buffs), 0)
+    drawn = {}
+    api.jaGrid()
+    check('a full recast is two half wedges', countExact('WEDGE'), 2)
+    world.recast = { [3] = { 206, 30 * 60 } }
+    api.jaRefresh()
+    drawn = {}
+    api.jaGrid()
+    check('a third of it left is one wedge', countExact('WEDGE'), 1)
+    check('...over the disc', countExact('CIRC'), 1)
+    -- a client whose draw list has no path calls: a smaller disc instead
+    local pathClear = drawList.PathClear
+    drawList.PathClear = nil
+    drawn = {}
+    api.jaGrid()
+    check('without the path calls, no wedge', countExact('WEDGE'), 0)
+    check('...but a second disc for what is left', countExact('CIRC'), 2)
+    drawList.PathClear = pathClear
+    c.cd_hide_ready = false
+    world.recast = {}
+    api.jaRefresh()
+    drawn = {}
+    api.jaGrid()
+    check('a ready ability is a disc and no wedge', countExact('WEDGE'), 0)
+    check('...one disc to each', countExact('CIRC'), 11)
+    c.cd_hide_ready = true
 
     world.recast = {}
-    frame('ja: column done')
+    frame('ja: grid done')
 end
 
 -- The switches persist like every other Settings-tab switch, and live behind

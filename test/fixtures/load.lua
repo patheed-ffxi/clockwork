@@ -70,6 +70,8 @@ local api = (function()
         -- runs, answering the rows it wrote, and the table it reads from
         jaRefresh = function() tm.jaRefresh() return tm.jaRows end,
         jaList = function() return tm.jaList end,
+        -- ...and the group they draw as, under the maneuver table
+        jaGrid = function() tm.jaGrid() end,
         currentHead = function() return tm.currentHead() end,
         spellName = function(id) return tm.spellName(id) end,
         canCast = function(id) return tm.fn.canCast(id) end,

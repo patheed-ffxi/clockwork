@@ -362,6 +362,48 @@ tm.square = function(state, frac)
     imgui.Dummy({ sz, sz + tm.s(2) })
 end
 
+-- A recast dial, the square's size, for your own abilities: a dark disc with
+-- a light wedge for the part of the recast left, from twelve o'clock round,
+-- whose edge sweeps clockwise as it runs down; a green disc when ready. XIUI's
+-- pet bar draws its 'clock' style the same way. PathFillConvex wants a convex
+-- shape and a wedge past half a disc is not one, so that goes in as two. XIUI
+-- checks for PathClear before trusting the path calls, and so does this: a
+-- client without them gets a smaller disc for what is left.
+tm.dial = function(state, frac)
+    local sz = tm.dpx('text') - tm.s(2)
+    local x, y = imgui.GetCursorScreenPos()
+    local r = sz / 2
+    local c = { x + r, y + tm.s(1) + r }
+    local dl = imgui.GetWindowDrawList()
+    if state == 'ready' then
+        dl:AddCircleFilled(c, r, tm.u32(COL_GOOD), 24)
+    else
+        dl:AddCircleFilled(c, r, tm.u32(tm.col.track), 24)
+        dl:AddCircle(c, r, tm.u32(tm.col.edge), 24)
+        frac = math.max(0, math.min(1, frac or 0))
+        local inner, col = r - tm.s(1), tm.u32(tm.col.fill)
+        if frac > 0 and dl.PathClear == nil then
+            dl:AddCircleFilled(c, inner * frac, col, 24)
+        elseif frac > 0 then
+            local top = -math.pi / 2
+            local function wedge(a0, a1)
+                dl:PathClear()
+                dl:PathLineTo(c)
+                dl:PathArcTo(c, inner, a0, a1, math.max(3, math.floor(12 * (a1 - a0) / math.pi)))
+                dl:PathFillConvex(col)
+            end
+            local from, half = top + (1 - frac) * 2 * math.pi, top + math.pi
+            if from < half then
+                wedge(from, half)
+                wedge(half, top + 2 * math.pi)
+            else
+                wedge(from, top + 2 * math.pi)
+            end
+        end
+    end
+    imgui.Dummy({ sz, sz + tm.s(2) })
+end
+
 -- The column right of the maneuver table.
 --
 -- EVERY recast cell sits here, whatever height the table happens to be.
@@ -372,35 +414,20 @@ end
 -- the same on the footer; what does not fit is returned for the caller.
 tm.sideColumn = function(lines, buffs)
     local left = {}
-    -- one label width for both groups, so every value in the column ends level
     local labelW = 0
-    for _, group in ipairs({ tm.rows, tm.jaRows }) do
-        for _, r in ipairs(group) do
-            local w = tm.width('label', r.label)
-            if w > labelW then labelW = w end
-        end
+    for _, r in ipairs(tm.rows) do
+        local w = tm.width('label', r.label)
+        if w > labelW then labelW = w end
     end
     for _, r in ipairs(tm.rows) do
         tm.recastCell(r, labelW)
-    end
-    -- Your own abilities go UNDER the automaton's, and only they are headed.
-    -- With hide-when-ready on they come and go all fight, and below the
-    -- automaton's cells that moves only where the column ends. Above them, or
-    -- under an `automaton` heading that appeared with them, every automaton
-    -- cell would jump a line each time.
-    local used = #tm.rows
-    if #tm.jaRows > 0 then
-        tm.text('label', COL_DIM, 'you')
-        tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, ability cooldowns.')
-        for _, r in ipairs(tm.jaRows) do tm.jaCell(r, labelW) end
-        used = used + #tm.jaRows + 1
     end
     -- The deltas go here or on the footer line, never half in each: room
     -- for the `gives` label but not for what it labels is not room, and
     -- dividing them would draw the label in both places, since the footer
     -- line brings its own.
     if #buffs > 0 then
-        if lines - used < #buffs + 1 then
+        if lines - #tm.rows < #buffs + 1 then
             left[#left + 1] = { kind = 'label' }
             for _, b in ipairs(buffs) do left[#left + 1] = { kind = 'buff', mod = b } end
             return left
@@ -851,20 +878,49 @@ tm.recastCell = function(r, labelW)
 end
 -- One of your own abilities, for the `you` group: the recast cell's shape
 -- without its icon and without its model. The client has no bitmap for a job
--- ability (IAbility carries a ListIconId and nothing loadable), so the plain
--- square; and the time is the client's own, so there is no `?` to explain.
+-- ability (IAbility carries a ListIconId and nothing loadable), so a dial; and
+-- the time is the client's own, so there is no `?` to explain.
 tm.jaCell = function(r, labelW)
-    tm.square(r.state, 0)
+    tm.dial(r.state, (r.state == 'counting' and r.total ~= nil) and r.remaining / r.total or 0)
     imgui.SameLine(0, tm.s(3))
     tm.text('label', COL_DIM, r.label)
     imgui.SameLine(0, tm.s(4) + math.max(0, (labelW or 0) - tm.width('label', r.label)))
     if r.state == 'counting' then
         local left = tm.fmtLeft(r.remaining)
         tm.text('text', COL_TEXT, left)
-        tip(('%s: %s left.'):format(r.name, left))
+        tip(r.total ~= nil and ('%s: %s left of %s.'):format(r.name, left, tm.fmtLeft(r.total))
+                           or ('%s: %s left.'):format(r.name, left))
     else
         tm.text('text', COL_GOOD, 'ready')
         tip(('%s: ready.'):format(r.name))
+    end
+end
+
+-- Your own abilities, under the maneuver table: the `you` label, then a cell
+-- each in equal columns, as many to a line as the panel's width holds. Under
+-- the table, not in the column beside it, so the automaton's cells never move
+-- for them and the column keeps the height it had before they existed. Every
+-- cell is as wide as the widest label showing plus a value slot that holds
+-- the longest value, so a countdown ticking never moves a neighbour: only an
+-- ability coming or going reflows the lines.
+tm.jaGrid = function()
+    local rows = tm.jaRows
+    if #rows == 0 then return end
+    local labelW = 0
+    for _, r in ipairs(rows) do
+        local w = tm.width('label', r.label)
+        if w > labelW then labelW = w end
+    end
+    local valueW = math.max(tm.width('text', '00:00'), tm.width('text', 'ready'))
+    local cell = (tm.dpx('text') - tm.s(2)) + tm.s(3) + labelW + tm.s(4) + valueW
+    local gap = tm.s(12)
+    local cols = math.max(1, math.floor((hudInner() + gap) / (cell + gap)))
+    tm.text('label', COL_DIM, 'you')
+    tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, ability cooldowns.')
+    for i, r in ipairs(rows) do
+        local col = (i - 1) % cols
+        if col > 0 then imgui.SameLine(hudPad() + col * (cell + gap), 0) end
+        tm.jaCell(r, labelW)
     end
 end
 

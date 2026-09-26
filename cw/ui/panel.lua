@@ -748,6 +748,7 @@ local function drawStatus(pet, maneuvers, overload)
     local cx = tm.elCols()
     drawManeuverTable(rows, cx, hid)
     local mods = drawRecastColumn(cx, #rows + 1, buffs)
+    tm.jaGrid()   -- your own recasts, under the table and its column
 
     if hasFire and hasAttachment('Flame Holder') then
         tm.text('text', COL_WARN, 'Flame Holder: the weaponskill will eat your Fire maneuvers')
