@@ -24,7 +24,12 @@ prediction did *not* match the server, so the model can be corrected from real p
   rate — the Heatsink behaviour this model assumes for Horizon, not upstream's.
 - **Weaponskill prediction.** What the automaton will use next, and why, with skillchain
   properties for automaton skills, player weaponskills and avatar skills.
-- **Recast clocks.** Live timers for the automaton's abilities and its ranged shot.
+- **Recast clocks.** Live timers for the automaton's abilities and its ranged shot, and
+  under the maneuver table, headed `you`, your own job abilities' recasts, read straight
+  from the client, each on a dial that sweeps down as it runs: Activate, Deus Ex
+  Automata, Repair, Maneuver, Role Reversal, Ventriloquy, Overdrive and the rest. Each
+  one can be switched off, and a ready one is left out unless you turn **hide when
+  ready** off (Settings tab, **display**).
 - **Loadout tab.** Head, frame and every attachment with its live modifier values, plus
   capacity per element. Saved attachment sets with a preview and a confirmed apply,
   paced a second a step as pupsets is.
@@ -99,7 +104,8 @@ the burden an automaton arrives with, the weaponskill tie-break — the departur
 assumption, not a verified server rule. **Many of the other values were transcribed from
 LandSandBoat and are unverified on HorizonXI**, including most attachment effects and several
 ability recasts. Treat a number on the HUD as the model's answer rather than the
-server's, and please report the ones that turn out wrong.
+server's, and please report the ones that turn out wrong. Your own job abilities' recasts
+are the exception: those are the client's own numbers.
 
 ### Gear swaps
 

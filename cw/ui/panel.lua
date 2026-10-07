@@ -391,10 +391,8 @@ local function percentBox(text, key, lo, hi, hint)
     if hint ~= nil then tip(hint) end
 end
 
-tm.settingsTab = function()
-    -- two columns: logging, then display, each 172 px of the panel's 364
-    imgui.BeginGroup()
-    tm.text('label', COL_DIM, 'logging')
+-- The Settings tab's logging view: what is written down and printed.
+local function loggingView()
     toggle('write a log file', 'logging',
            'One file per character per day, one JSON object a line: every\nmaneuver, cast, ability and loadout as it happens.')
     toggle('anomalies to the file', 'anomaly_file',
@@ -403,10 +401,12 @@ tm.settingsTab = function()
            'The red line when the automaton does something that was not\npredicted. The Tuning tab counts them either way.')
     toggle('predictions to chat', 'debug_predictions',
            'Print each weaponskill and spell prediction to chat as it is made.')
-    imgui.EndGroup()
-    imgui.SameLine(hudPad() + tm.s(180), 0)
+end
+
+-- The Settings tab's display view: what the panel shows, then which of your
+-- own recasts it shows. Two columns each, 172 px of the panel's 364.
+local function displayView()
     imgui.BeginGroup()
-    tm.text('label', COL_DIM, 'display')
     toggle('the automaton\'s target', 'show_target',
            'Show the target\'s name and HP under the vitals while it fights.')
     toggle('weaponskill prediction', 'show_ws',
@@ -417,6 +417,9 @@ tm.settingsTab = function()
            'The oils line on the Status tab, and its warning when you have none.')
     toggle('hide burden at 0% OL', 'hide_zero_ol_rows',
            'Drop the row for an element with nothing up when another maneuver\nof it would overload at 0%. A maneuver that is up keeps its burden.')
+    imgui.EndGroup()
+    imgui.SameLine(hudPad() + tm.s(180), 0)
+    imgui.BeginGroup()
     toggle('what-if sidebar', 'sidebar',
            'A second window: what using each maneuver now would change.',
            function() tm.sidebarInvalidate() end)
@@ -428,6 +431,39 @@ tm.settingsTab = function()
                'Overload chance at which the OL% column turns red. Type a number\nand press Enter.')
     imgui.EndGroup()
 
+    imgui.Separator()
+    tm.text('label', COL_DIM, 'ability cooldowns')
+    tip('Your own job abilities, under the Status tab\'s maneuver table: which\nones, and whether a ready one is listed.')
+    toggle('hide when ready', 'cd_hide_ready',
+           'List an ability only while it is on recast. Off lists every one\nswitched on below, ready or not.')
+    local list = tm.jaList
+    local half = math.ceil(#list / 2)
+    imgui.BeginGroup()
+    for i = 1, half do toggle(list[i].name, 'cd_' .. list[i].key) end
+    imgui.EndGroup()
+    imgui.SameLine(hudPad() + tm.s(180), 0)
+    imgui.BeginGroup()
+    for i = half + 1, #list do toggle(list[i].name, 'cd_' .. list[i].key) end
+    imgui.EndGroup()
+end
+
+tm.settingsTab = function()
+    -- The two views, as Tuning switches its own. The harness's 'all' draws
+    -- both, so every switch stays reachable in one frame.
+    imgui.PushFont(tm.font, tm.px('label'))
+    for i, v in ipairs({ 'display', 'logging' }) do
+        if i > 1 then imgui.SameLine(0, tm.s(6)) end
+        imgui.PushStyleColor(ImGuiCol_Text, (tm.settingsView == v) and COL_TEXT or COL_DIM)
+        if imgui.SmallButton(v .. '##cw_settings') then tm.settingsView = v end
+        imgui.PopStyleColor()
+    end
+    imgui.PopFont()
+    local all = (tm.tab == 'all')
+    if all or tm.settingsView == 'display' then displayView() end
+    if all or tm.settingsView == 'logging' then loggingView() end
+
+    -- Neither a display setting nor a logging one, so under both: the model's
+    -- resync, and the file every switch here is saved to.
     imgui.Separator()
     tm.text('label', COL_DIM, 'model')
     imgui.PushFont(tm.font, tm.px('text'))
@@ -457,7 +493,7 @@ tm.settingsTab = function()
                 'settings back to the defaults in cw/config.lua')))
         end
     end
-    tip('Put every switch on this tab back to its default. Nothing else is\ntouched. Click twice.')
+    tip('Put every switch in Settings, display and logging both, back to its\ndefault. Nothing else is touched. Click twice.')
     imgui.PopFont()
 end
 
@@ -702,6 +738,7 @@ local function drawStatus(pet, maneuvers, overload)
     local cx = tm.elCols()
     drawManeuverTable(rows, cx, hid)
     local mods = drawRecastColumn(cx, #rows + 1, buffs)
+    tm.jaGrid()   -- your own recasts, under the table and its column
 
     if hasFire and hasAttachment('Flame Holder') then
         tm.text('text', COL_WARN, 'Flame Holder: the weaponskill will eat your Fire maneuvers')

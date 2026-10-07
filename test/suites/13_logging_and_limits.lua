@@ -87,6 +87,7 @@ do
     local inbound = f:read('*a')
     f:close()
     check('inbound never requires reading', inbound:find("require('cw.reading')", 1, true), nil)
+    check('inbound never requires cooldowns', inbound:find("require('cw.cooldowns')", 1, true), nil)
     check('inbound is the packet handler', debug.getinfo(handlers['packet_in'], 'u').nups < 60, true)
 
     -- The registered handlers are one-line wrappers, so the ceiling that

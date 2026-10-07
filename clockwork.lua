@@ -1,6 +1,6 @@
 addon.name    = 'clockwork'
 addon.author  = 'Pathead'
-addon.version = '1.18.0'
+addon.version = '1.19.0'
 addon.desc    = 'Puppetmaster burden, maneuvers, weaponskill prediction, loadout and anomaly logging.'
 
 require('common')
@@ -16,6 +16,7 @@ local tm     = require('cw.state')
 local U      = require('cw.util')
 local L      = require('cw.log')
 require('cw.reading')
+require('cw.cooldowns')  -- publishes tm.jaList and tm.jaRefresh
 require('cw.attachments')
 require('cw.burden')
 require('cw.timers')
@@ -53,7 +54,7 @@ ashita.events.register('load', 'clockwork_load', function()
     -- the log.
     L.logEvent('load', { version = addon.version, pet = (tm.ids.pet_id ~= 0) })
     print(chat.header('clockwork'):append(chat.message(
-        'loaded. /cw show - /cw attachments - packet driven, ServerId filtered.')))
+        'loaded. /cw show - /cw attachments')))
 end)
 
 ashita.events.register('unload', 'clockwork_unload', function()

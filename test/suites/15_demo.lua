@@ -64,6 +64,37 @@ do
     check('and the stoneskin recast runs behind the buff', rows['Shock Absorber'], 'counting')
     check('with no Mana Converter row at all', rows['Mana Converter'], nil)
 
+    -- Your own recasts come from the made-up master too. Demo is for looking
+    -- at the HUD off PUP, where the client's recast table holds nothing of a
+    -- Puppetmaster's and HasAbility knows none of it - so both are emptied
+    -- here, and the group still lists the master's five, at LSB's lengths
+    -- (sql/abilities.sql recastTime).
+    world.abilities, world.recast = {}, {}
+    frame('demo: your recasts')
+    local function jaByKey()
+        local out = {}
+        for _, r in ipairs(api.jaRefresh()) do out[r.key] = r end
+        return out
+    end
+    local ja = jaByKey()
+    check('the demo master has Activate on recast', (ja.activate or {}).state, 'counting')
+    check('...with 13:40 of it left', (ja.activate or {}).remaining, 820)
+    check('...out of 20:00, so its dial is not full', (ja.activate or {}).total, 1200)
+    check('Repair is counting too', (ja.repair or {}).remaining, 52)
+    check('...out of 1:30', (ja.repair or {}).total, 90)
+    check('a maneuver has just gone up, so its recast is full', (ja.maneuver or {}).remaining, 10)
+    check('...out of 10 s', (ja.maneuver or {}).total, 10)
+    check('Deus Ex is ready', (ja.dea or {}).state, 'ready')
+    check('...and so is Overdrive', (ja.overdrive or {}).state, 'ready')
+    check('an ability switched on that the master lacks is not listed', ja.maintenance, nil)
+    local nJa = 0
+    for _ in pairs(ja) do nJa = nJa + 1 end
+    check('five in all', nJa, 5)
+    check('the group is drawn', saw('13:40'), true)
+    api.config.cd_hide_ready = true
+    check('hide when ready leaves the three counting', #api.jaRefresh(), 3)
+    api.config.cd_hide_ready = false
+
     -- The made-up world MOVES. The recast rows always did, because they are
     -- read against the clock, but the maneuvers, the overload, the TP and the
     -- target's HP were constants and most of the panel sat still. They are
@@ -77,6 +108,27 @@ do
     check('a maneuver is six seconds shorter', api.activeManeuvers()[1].remaining, man0 - 6)
     check('TP has moved', api.petInfo().tp ~= tp0, true)
     check('the target has lost health', api.demoMob().hpp < mob0, true)
+    ja = jaByKey()
+    check('your recasts run down with it', (ja.activate or {}).remaining, 814)
+    check('...the maneuver one too', (ja.maneuver or {}).remaining, 4)
+
+    -- ...and keep moving however long demo stays on. A maneuver coming back
+    -- up is one being used, so the maneuver recast restarts with it (Fire's,
+    -- at 42 s); Repair, ready at 52 s, is used again 30 s after that.
+    advance(36)
+    frame('demo 42 s in')
+    check('the maneuver recast restarts as Fire comes back up', (jaByKey().maneuver or {}).remaining, 10)
+    -- 52 s in: Repair's 1:30 is up, and Fire went up 10 s ago. A recast at
+    -- 0 s is ready, as the client's slot at 0 ticks is.
+    advance(10)
+    frame('demo 52 s in')
+    ja = jaByKey()
+    check('Repair is ready the moment its recast is up', (ja.repair or {}).state, 'ready')
+    check('...with no length', (ja.repair or {}).total, nil)
+    check('the maneuver recast is ready 10 s after the maneuver', (ja.maneuver or {}).state, 'ready')
+    advance(30)
+    frame('demo 82 s in')
+    check('Repair is used again', (jaByKey().repair or {}).remaining, 90)
 
     -- the next one is a different frame, which is the point of having more
     -- than one: a melee frame never reaches the spell ladder and only
@@ -124,6 +176,8 @@ do
     api.config.compact = false
     local _, ol = api.activeManeuvers()
     check('...and says so', ol, 14)
+    frame('demo 4')
+    check('with no maneuver up, the maneuver recast is ready', (jaByKey().maneuver or {}).state, 'ready')
     -- The Loadout tab reads the scenario's loadout as the equipped set, which
     -- is right while demo is on. Read it HERE, on the last scenario: every
     -- scenario switch moves auto044Seq, so a set cached on an earlier one was
@@ -139,6 +193,16 @@ do
     check('the made-up loadout is not saveable afterwards', api.equippedSet(), nil)
     frame('after demo')
     check('and the made-up name is gone', saw('Alpha'), false)
+    -- ...and your recasts are the client's again: its 30 s Repair, at the
+    -- length the client shows rather than the demo's 1:30
+    world.abilities = { [0x200 + 137] = true }
+    world.recast = { [3] = { 206, 30 * 60 } }
+    ja = jaByKey()
+    check('off, your recasts are read off the client again', (ja.repair or {}).remaining, 30)
+    check('...at the client\'s length', (ja.repair or {}).total, 30)
+    check('...and nothing of the demo master\'s is left', ja.activate, nil)
+    world.abilities, world.recast = {}, {}
+    api.jaRefresh()
     -- it is runtime only: nothing about it reaches the settings file
     api.loadSettings()
     check('demo never persists', api.demoOn(), false)

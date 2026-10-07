@@ -66,6 +66,12 @@ local api = (function()
         scProps = function(kind, id) return (kind == 'ws') and D.WS_SC[id] or D.MOBSKILL_SC[id] end,
         timerRows = function() return tm.timerRows() end,
         timersClear = function(edge, src) T.timersClear(edge, src) end,
+        -- your own job abilities (cw/cooldowns.lua): the refresh frame.tick
+        -- runs, answering the rows it wrote, and the table it reads from
+        jaRefresh = function() tm.jaRefresh() return tm.jaRows end,
+        jaList = function() return tm.jaList end,
+        -- ...and the group they draw as, under the maneuver table
+        jaGrid = function() tm.jaGrid() end,
         currentHead = function() return tm.currentHead() end,
         spellName = function(id) return tm.spellName(id) end,
         canCast = function(id) return tm.fn.canCast(id) end,
@@ -145,6 +151,7 @@ local api = (function()
         cog = function(x, y, r, c) return tm.cog(x, y, r, c) end,
         tuneTab = function() return tm.tuneTab end,
         selectTuneTab = function(t) tm.tuneTab = t end,
+        settingsView = function() return tm.settingsView end,
         sideColumn = function(lines, buffs) return tm.sideColumn(lines, buffs) end,
         fontLoad = function() return tm.fontLoad() end, px = function(k) return tm.px(k) end,
         -- the scaling primitives: px is a font BASE, s is a drawn pixel

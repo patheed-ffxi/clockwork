@@ -247,6 +247,9 @@ local function tick()
     -- Everything above this line is the model and the logger: they keep
     -- running with the window down. Only the drawing stops.
     if uiHidden() then return false end
+    -- Your own job abilities' recasts (cw/cooldowns.lua) are display only, so
+    -- they are read here, below the gates, and not with the model above.
+    tm.jaRefresh()
     return true
 end
 

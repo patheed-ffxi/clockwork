@@ -231,6 +231,10 @@ tm.tab = 'status'
 -- opened for - the error, the anomalies, the recast history - so it is
 -- the default; the per-element stat checks wait behind their button.
 tm.tuneTab = 'model'
+-- Settings is two views as well. `display` is what the tab is opened for -
+-- what the panel shows, your own recasts among it - so it is the default;
+-- `logging` holds what is written down and printed.
+tm.settingsView = 'display'
 -- The header's button row, right-aligned as a unit at the end of the name
 -- line: the lettered tabs, ? (the what-if window), C (compact), the cog
 -- (Settings) and x (close).
@@ -358,6 +362,48 @@ tm.square = function(state, frac)
                              tm.u32(tm.col.fill), tm.s(2))
         end
         dl:AddRect({ x, y }, { x + sz, y + sz }, tm.u32(tm.col.edge), tm.s(2))
+    end
+    imgui.Dummy({ sz, sz + tm.s(2) })
+end
+
+-- A recast dial, the square's size, for your own abilities: a dark disc with
+-- a light wedge for the part of the recast left, from twelve o'clock round,
+-- whose edge sweeps clockwise as it runs down; a green disc when ready. XIUI's
+-- pet bar draws its 'clock' style the same way. PathFillConvex wants a convex
+-- shape and a wedge past half a disc is not one, so that goes in as two. XIUI
+-- checks for PathClear before trusting the path calls, and so does this: a
+-- client without them gets a smaller disc for what is left.
+tm.dial = function(state, frac)
+    local sz = tm.dpx('text') - tm.s(2)
+    local x, y = imgui.GetCursorScreenPos()
+    local r = sz / 2
+    local c = { x + r, y + tm.s(1) + r }
+    local dl = imgui.GetWindowDrawList()
+    if state == 'ready' then
+        dl:AddCircleFilled(c, r, tm.u32(COL_GOOD), 24)
+    else
+        dl:AddCircleFilled(c, r, tm.u32(tm.col.track), 24)
+        dl:AddCircle(c, r, tm.u32(tm.col.edge), 24)
+        frac = math.max(0, math.min(1, frac or 0))
+        local inner, col = r - tm.s(1), tm.u32(tm.col.fill)
+        if frac > 0 and dl.PathClear == nil then
+            dl:AddCircleFilled(c, inner * frac, col, 24)
+        elseif frac > 0 then
+            local top = -math.pi / 2
+            local function wedge(a0, a1)
+                dl:PathClear()
+                dl:PathLineTo(c)
+                dl:PathArcTo(c, inner, a0, a1, math.max(3, math.floor(12 * (a1 - a0) / math.pi)))
+                dl:PathFillConvex(col)
+            end
+            local from, half = top + (1 - frac) * 2 * math.pi, top + math.pi
+            if from < half then
+                wedge(from, half)
+                wedge(half, top + 2 * math.pi)
+            else
+                wedge(from, top + 2 * math.pi)
+            end
+        end
     end
     imgui.Dummy({ sz, sz + tm.s(2) })
 end
@@ -833,6 +879,53 @@ tm.recastCell = function(r, labelW)
     tm.text('text', (r.state == 'ready') and COL_GOOD or (r.state == 'counting') and COL_TEXT or COL_DIM, txt)
     tip(('%s: %ds recast. Ready means usable, not that it is about to\nfire. ? = not used since the addon loaded.')
         :format(r.name, r.model))
+end
+-- One of your own abilities, for the `you` group: the recast cell's shape
+-- without its icon and without its model. The client has no bitmap for a job
+-- ability (IAbility carries a ListIconId and nothing loadable), so a dial; and
+-- the time is the client's own, so there is no `?` to explain.
+tm.jaCell = function(r, labelW)
+    tm.dial(r.state, (r.state == 'counting' and r.total ~= nil) and r.remaining / r.total or 0)
+    imgui.SameLine(0, tm.s(3))
+    tm.text('label', COL_DIM, r.label)
+    imgui.SameLine(0, tm.s(4) + math.max(0, (labelW or 0) - tm.width('label', r.label)))
+    if r.state == 'counting' then
+        local left = tm.fmtLeft(r.remaining)
+        tm.text('text', COL_TEXT, left)
+        tip(r.total ~= nil and ('%s: %s left of %s.'):format(r.name, left, tm.fmtLeft(r.total))
+                           or ('%s: %s left.'):format(r.name, left))
+    else
+        tm.text('text', COL_GOOD, 'ready')
+        tip(('%s: ready.'):format(r.name))
+    end
+end
+
+-- Your own abilities, under the maneuver table: the `you` label, then a cell
+-- each in equal columns, as many to a line as the panel's width holds. Under
+-- the table, not in the column beside it, so the automaton's cells never move
+-- for them and the column keeps the height it had before they existed. Every
+-- cell is as wide as the widest label showing plus a value slot that holds
+-- the longest value, so a countdown ticking never moves a neighbour: only an
+-- ability coming or going reflows the lines.
+tm.jaGrid = function()
+    local rows = tm.jaRows
+    if #rows == 0 then return end
+    local labelW = 0
+    for _, r in ipairs(rows) do
+        local w = tm.width('label', r.label)
+        if w > labelW then labelW = w end
+    end
+    local valueW = math.max(tm.width('text', '00:00'), tm.width('text', 'ready'))
+    local cell = (tm.dpx('text') - tm.s(2)) + tm.s(3) + labelW + tm.s(4) + valueW
+    local gap = tm.s(12)
+    local cols = math.max(1, math.floor((hudInner() + gap) / (cell + gap)))
+    tm.text('label', COL_DIM, 'you')
+    tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, display.')
+    for i, r in ipairs(rows) do
+        local col = (i - 1) % cols
+        if col > 0 then imgui.SameLine(hudPad() + col * (cell + gap), 0) end
+        tm.jaCell(r, labelW)
+    end
 end
 
 -- The maneuver table's column origins, as absolute SameLine offsets rather

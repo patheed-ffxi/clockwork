@@ -28,6 +28,11 @@ local world = {
     equipRc = nil,       -- what the equip stub returns; nil means 1 (accepted)
     answered = 0,        -- how many of equipCalls the fake server has answered
     task = nil,          -- the coroutine ashita.tasks.once was handed
+    -- The client's ability recast table: slot -> { timer id, ticks left in
+    -- 1/60 s }. An empty slot is absent. Slot 0 is the two-hour.
+    recast = {},
+    -- What HasAbility answers true for, by RESOURCE id: 0x200 + LSB's abilityId.
+    abilities = {},
 }
 
 -- Item names the resource manager answers with. Heads and frames use the live
