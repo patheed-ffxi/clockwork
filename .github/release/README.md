@@ -1,7 +1,6 @@
 # clockwork
 
-> **Not approved for use on HorizonXI.** clockwork is pending approval and is not
-> currently approved for use on HorizonXI. Do not use it there until it has been approved.
+> **Approved for use on HorizonXI.**
 
 An Ashita addon for HorizonXI (requires Ashita 4.3 or later): a HUD for **Puppetmaster**. Burden and overload risk
 per element, the maneuvers you have up, the automaton's next weaponskill and spell, its
