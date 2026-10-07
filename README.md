@@ -1,7 +1,6 @@
 # clockwork
 
-> **Not approved for use on HorizonXI.** clockwork is pending approval and is not
-> currently approved for use on HorizonXI
+> **Approved for use on HorizonXI.**
 
 An [Ashita](https://www.ashitaxi.com/) 4.3 addon for [HorizonXI](https://horizonxi.com/):
 a HUD for **Puppetmaster**. It shows you what your automaton is actually doing —
