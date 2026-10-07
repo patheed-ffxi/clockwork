@@ -109,6 +109,41 @@ local SCENARIOS = {
     },
 }
 
+-- The master's own job abilities, for the `you` group under the maneuver table
+-- (cw/cooldowns.lua): the same on every automaton, because they are yours, not
+-- the frame's. Five are learned. Lengths are LSB's recastTime
+-- (sql/abilities.sql), keyed by its recastId as the client's table is.
+local JA_HAS = { activate = true, dea = true, repair = true, maneuver = true, overdrive = true }
+-- Counting when a scenario opens: Activate 13:40 into its 20:00, Repair 52 s
+-- into its 1:30. Each is used again `idle` seconds after it is ready, so the
+-- dials keep moving however long demo stays on. Deus Ex and Overdrive stay
+-- ready, and the maneuver recast is not here: it runs whenever one of the
+-- scenario's maneuvers comes back up (tick), which is that maneuver being used.
+local JA_RECASTS = {
+    { timer = 205, total = 1200, left = 820, idle = 60 },   -- Activate
+    { timer = 206, total = 90,   left = 52,  idle = 30 },   -- Repair
+}
+local MANEUVER_TIMER, MANEUVER_RECAST = 210, 10
+
+-- The master's recasts t seconds in, as seconds left and whole lengths by
+-- timer id; a ready ability is in neither, as in the client's table.
+local function jaAt(d, t)
+    local left, total = tm.clear(d.ja.left), tm.clear(d.ja.total)
+    for _, j in ipairs(JA_RECASTS) do
+        local into = (j.total - j.left + t) % (j.total + j.idle)
+        if into < j.total then left[j.timer], total[j.timer] = j.total - into, j.total end
+    end
+    -- the maneuver most recently back up, by its own sawtooth
+    local since = nil
+    for _, m in ipairs(d.maneuvers) do
+        local s = t % m.dur
+        if since == nil or s < since then since = s end
+    end
+    if since ~= nil and since < MANEUVER_RECAST then
+        left[MANEUVER_TIMER], total[MANEUVER_TIMER] = MANEUVER_RECAST - since, MANEUVER_RECAST
+    end
+end
+
 -- Names by slot, the shape equippedNames answers with: 1 head, 2 frame, 3-14 the
 -- twelve attachment slots.
 local function slotNames(sc)
@@ -155,6 +190,7 @@ local function tick()
     d.pet.tp = math.floor((t * 45) % 1500)
     -- ...and the target loses health, then is replaced by another one
     d.mob.hpp = 100 - math.floor((t * 2.5) % 96)
+    jaAt(d, t)
 end
 
 local function enable(i)
@@ -176,6 +212,7 @@ local function enable(i)
         oils = { ['Automaton Oil'] = 3, ['Automaton Oil +1'] = 1,
                  ['Automaton Oil +2'] = 12, ['Automaton Oil +3'] = 0 },
         names = slotNames(sc),
+        ja = { has = JA_HAS, left = {}, total = {} },
     }
     -- The server's own view of the automaton, which is what the Loadout tab, the
     -- spell ladder and the frame/head readers all work from. Shaped as

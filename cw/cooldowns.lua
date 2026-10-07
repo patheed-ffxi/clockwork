@@ -59,26 +59,43 @@ end
 -- is part of one, so that recast's dial starts full.
 local longest = {}
 
+-- Whether you have learned it: the client's answer, or under /cw demo the
+-- made-up master's.
+local function learned(d, p, ja)
+    if d ~= nil then return d.has[ja.key] == true end
+    return p:HasAbility(JA_RESOURCE + ja.ability)
+end
+
 -- Render thread, once a frame from frame.tick, below its visibility gates:
 -- this is display only, so it has no reason to run with the window down. One
 -- safe() round the lot, so a failed read is an empty group and one count in
 -- tm.swallowed.
 tm.jaRefresh = function()
     tm.jaRows = safe(function()
-        local left, p, rows = recastLeft(), player(), {}
-        for timer in pairs(longest) do
-            if left[timer] == nil then longest[timer] = nil end
+        -- Under /cw demo the made-up master answers every read (cw/demo.lua),
+        -- whole lengths included: a demo opens mid-recast, where first sight
+        -- would start each dial full. `longest` is the client's and is left be.
+        local d = tm.demo and tm.demo.ja
+        local left, total, p, rows
+        if d ~= nil then
+            left, total = d.left, d.total
+        else
+            left, total, p = recastLeft(), longest, player()
+            for timer in pairs(longest) do
+                if left[timer] == nil then longest[timer] = nil end
+            end
+            for timer, rem in pairs(left) do
+                if rem > (longest[timer] or 0) then longest[timer] = rem end
+            end
         end
-        for timer, rem in pairs(left) do
-            if rem > (longest[timer] or 0) then longest[timer] = rem end
-        end
+        rows = {}
         for _, ja in ipairs(tm.jaList) do
             local rem = left[ja.timer]
-            if config['cd_' .. ja.key] and p:HasAbility(JA_RESOURCE + ja.ability)
+            if config['cd_' .. ja.key] and learned(d, p, ja)
                and (rem ~= nil or not config.cd_hide_ready) then
                 rows[#rows + 1] = { key = ja.key, label = ja.label, name = ja.name,
                                     state = (rem ~= nil) and 'counting' or 'ready',
-                                    remaining = rem, total = longest[ja.timer] }
+                                    remaining = rem, total = total[ja.timer] }
             end
         end
         return rows
