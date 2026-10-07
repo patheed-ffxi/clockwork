@@ -140,11 +140,11 @@ local config =
     hide_zero_ol_rows = false,
     -- Your own job abilities' recasts, listed under the automaton's in the
     -- Status tab's recast column (cw/cooldowns.lua): a switch for each, and one
-    -- that leaves an ability out while it is ready. That one ships on, so the
-    -- column looks as it did before this existed until something goes on
-    -- recast; off, every ability switched on is listed all the time. The
-    -- Settings tab's ability cooldowns block sets all twelve.
-    cd_hide_ready    = true,
+    -- that leaves an ability out while it is ready. That one ships off, so
+    -- every ability switched on is listed all the time, `ready` or counting.
+    -- Retrieve and Deactivate ship off. The Settings tab's ability cooldowns
+    -- block sets all twelve.
+    cd_hide_ready    = false,
     cd_activate      = true,
     cd_dea           = true,
     cd_repair        = true,
@@ -153,8 +153,8 @@ local config =
     cd_role_reversal = true,
     cd_ventriloquy   = true,
     cd_deploy        = true,
-    cd_retrieve      = true,
-    cd_deactivate    = true,
+    cd_retrieve      = false,
+    cd_deactivate    = false,
     cd_overdrive     = true,
     -- The HUD's typeface: two files under C:\Windows\Fonts, loaded once on the
     -- load event and never in a frame (tm.fontLoad). A missing file falls back

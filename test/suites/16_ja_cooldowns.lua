@@ -16,12 +16,15 @@ end
 do
     local c = api.config
     check('eleven abilities', #api.jaList(), 11)
-    check('hide when ready ships on', c.cd_hide_ready, true)
-    local off = nil
+    check('hide when ready ships off', c.cd_hide_ready, false)
+    local off = {}
     for _, ja in ipairs(api.jaList()) do
-        if c['cd_' .. ja.key] ~= true then off = ja.key end
+        if c['cd_' .. ja.key] ~= true then off[#off + 1] = ja.key end
     end
-    check('every ability ships switched on', off, nil)
+    check('every ability ships switched on but Retrieve and Deactivate',
+          table.concat(off, ','), 'retrieve,deactivate')
+    -- the rest of the suite lists all eleven, up to its restoreDefaults()
+    c.cd_retrieve, c.cd_deactivate = true, true
 
     learnAll()
     c.cd_hide_ready = false
@@ -249,10 +252,11 @@ do
     api.loadSettings()
     check('a junk value keeps the live switch', c.cd_repair, true)
 
-    c.cd_hide_ready, c.cd_overdrive = false, false
+    c.cd_hide_ready, c.cd_overdrive, c.cd_retrieve = true, false, true
     api.restoreDefaults()
-    check('restore turns hide when ready back on', c.cd_hide_ready, true)
+    check('restore turns hide when ready back off', c.cd_hide_ready, false)
     check('restore switches an ability back on', c.cd_overdrive, true)
+    check('...and Retrieve back off', c.cd_retrieve, false)
     suiteLogging()
 
     -- Settings is two views, display and logging, and opens on display. The
