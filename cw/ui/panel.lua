@@ -417,6 +417,8 @@ local function displayView()
            'The oils line on the Status tab, and its warning when you have none.')
     toggle('hide burden at 0% OL', 'hide_zero_ol_rows',
            'Drop the row for an element with nothing up when another maneuver\nof it would overload at 0%. A maneuver that is up keeps its burden.')
+    toggle('overload seconds', 'show_ol_secs',
+           'The OL s column on the Status tab: how long an overload would last\nif the next maneuver of that element caused one.')
     imgui.EndGroup()
     imgui.SameLine(hudPad() + tm.s(180), 0)
     imgui.BeginGroup()
