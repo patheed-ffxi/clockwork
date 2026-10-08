@@ -263,7 +263,7 @@ do
     for _, p in ipairs({ { 'weaponskill prediction', 'show_ws' },
                          { 'what maneuvers give', 'show_gives' },
                          { 'oil counts', 'show_oils' },
-                         { 'overload seconds', 'show_ol_secs' } }) do
+                         { 'overload duration', 'show_ol_secs' } }) do
         clicks[p[1] .. '##cw_set_' .. p[2]] = true
         frame('settings ' .. p[2])
         check(p[2] .. ' toggled from the tab', cfg[p[2]], false)
