@@ -177,10 +177,18 @@ local function onCommand(e)
         statCommand(args[3], args[4])
 
     elseif sub == 'compact' then
-        config.compact = not config.compact
+        -- With 1 or 2 it picks the rows and the strip, whichever layout is
+        -- up; bare, it toggles the strip.
+        local rows = tonumber(args[3])
+        if rows == 1 or rows == 2 then
+            config.compact, config.compact_rows = true, rows
+        else
+            config.compact = not config.compact
+        end
         tm.saveSettings()
         print(chat.header('clockwork'):append(chat.message(
-            'compact ' .. tostring(config.compact) .. ' - the one-line layout')))
+            'compact ' .. tostring(config.compact) .. ' - '
+            .. ((config.compact_rows == 2) and 'two rows' or 'one line'))))
 
     elseif sub == 'reset' then
         resetModel(nil)
@@ -211,7 +219,8 @@ local function onCommand(e)
         local function say(line) print(chat.header('clockwork'):append(chat.message(line))) end
         say('/cw - what the automaton is doing')
         say('  show - the panel on or off')
-        say('  compact - the one-line strip')
+        say('  compact - the compact strip; compact 2 for two rows,')
+        say('    compact 1 for one')
         say('  demo - made-up automatons, for looking at the HUD off PUP;')
         say('    each /cw demo is the next one, then off again')
         say('  attachments - the attachments you own')

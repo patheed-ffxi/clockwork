@@ -57,6 +57,7 @@ local PERSIST = {
     cd_overdrive      = { 'bool' },
     sidebar           = { 'bool' },
     compact           = { 'bool' },
+    compact_rows      = { 'int', 1, 2 },
     ui_scale          = { 'int', 75, 200 },
     warn_at           = { 'int', 1, 100 },
 }

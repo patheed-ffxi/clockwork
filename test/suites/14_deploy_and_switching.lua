@@ -91,6 +91,14 @@ do
     check('column two, both rows', countExact('X:78'), 2)
     check('...and its bars', countExact('X:102'), 2)
     check('the recast cells are icons', saw('IMG:'), true)
+    -- Two rows with three recasts: they run 17 + 3 x 27 = 98, the buttons
+    -- start 8 on at 106 and take 4 x (20 + 8) + 3 x 3 = 121, to 227 - past
+    -- the gems' 205 - so the second column moves out to 227 + 8 + 9 = 244 on
+    -- both rows, rather than the answers sitting on the buttons.
+    api.config.compact_rows = 2
+    frame('compact labelled, two rows')
+    check('two rows: a long recast row moves the column out', countExact('X:244'), 2)
+    api.config.compact_rows = 1
     -- and the row says what granted it, which is what the icon is of
     local seen = {}
     for _, r in ipairs(api.timerRows()) do seen[r.name] = r.grant end

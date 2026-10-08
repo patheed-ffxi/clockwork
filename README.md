@@ -54,6 +54,10 @@ prediction did *not* match the server, so the model can be corrected from real p
 
 ![The compact layout](screenshots/compact.png)
 
+`/cw compact 2`, or the strip's `2` button, puts it on two rows instead: the gems over
+the recasts and the buttons, the bars over the weaponskill and spell. `/cw compact 1`,
+or the `1` button, goes back to one.
+
 ## Install
 
 1. Download the latest `clockwork.zip` from
@@ -71,7 +75,7 @@ To load it every time, add `/addon load clockwork` to your Ashita script.
 | Command | Does |
 |---|---|
 | `/cw show` | the panel on or off (the model and the log run either way) |
-| `/cw compact` | the one-line strip instead of the full panel |
+| `/cw compact` | the compact strip instead of the full panel; `/cw compact 2` for two rows, `/cw compact 1` for one |
 | `/cw demo` | made-up automatons, for looking at the HUD off PUP; each `/cw demo` is the next one, then off again |
 | `/cw attachments` | the attachments you own |
 | `/cw equipped` | head, frame and attachments |
