@@ -373,12 +373,10 @@ end
 -- pet bar draws its 'clock' style the same way. PathFillConvex wants a convex
 -- shape and a wedge past half a disc is not one, so that goes in as two. XIUI
 -- checks for PathClear before trusting the path calls, and so does this: a
--- client without them gets a smaller disc for what is left.
-tm.dial = function(state, frac)
-    local sz = tm.dpx('text') - tm.s(2)
-    local x, y = imgui.GetCursorScreenPos()
-    local r = sz / 2
-    local c = { x + r, y + tm.s(1) + r }
+-- client without them gets a smaller disc for what is left. dialAt draws one
+-- of radius r round c; tm.dial draws the text-sized one at the cursor and
+-- makes room for it.
+local function dialAt(c, r, state, frac)
     local dl = imgui.GetWindowDrawList()
     if state == 'ready' then
         dl:AddCircleFilled(c, r, tm.u32(COL_GOOD), 24)
@@ -406,6 +404,11 @@ tm.dial = function(state, frac)
             end
         end
     end
+end
+tm.dial = function(state, frac)
+    local sz = tm.dpx('text') - tm.s(2)
+    local x, y = imgui.GetCursorScreenPos()
+    dialAt({ x + sz / 2, y + tm.s(1) + sz / 2 }, sz / 2, state, frac)
     imgui.Dummy({ sz, sz + tm.s(2) })
 end
 
@@ -881,24 +884,58 @@ tm.recastCell = function(r, labelW)
     tip(('%s: %ds recast. Ready means usable, not that it is about to\nfire. ? = not used since the addon loaded.')
         :format(r.name, r.model))
 end
+-- What is left on one of your own abilities, or that it is ready, on hover.
+local function jaTip(r)
+    if r.state == 'counting' then
+        local left = tm.fmtLeft(r.remaining)
+        tip(r.total ~= nil and ('%s: %s left of %s.'):format(r.name, left, tm.fmtLeft(r.total))
+                           or ('%s: %s left.'):format(r.name, left))
+    else
+        tip(('%s: ready.'):format(r.name))
+    end
+end
+local function jaFrac(r)
+    return (r.state == 'counting' and r.total ~= nil) and r.remaining / r.total or 0
+end
+
 -- One of your own abilities, for the `you` group: the recast cell's shape
 -- without its icon and without its model. The client has no bitmap for a job
 -- ability (IAbility carries a ListIconId and nothing loadable), so a dial; and
 -- the time is the client's own, so there is no `?` to explain.
 tm.jaCell = function(r, labelW)
-    tm.dial(r.state, (r.state == 'counting' and r.total ~= nil) and r.remaining / r.total or 0)
+    tm.dial(r.state, jaFrac(r))
     imgui.SameLine(0, tm.s(3))
     tm.text('label', COL_DIM, r.label)
     imgui.SameLine(0, tm.s(4) + math.max(0, (labelW or 0) - tm.width('label', r.label)))
     if r.state == 'counting' then
-        local left = tm.fmtLeft(r.remaining)
-        tm.text('text', COL_TEXT, left)
-        tip(r.total ~= nil and ('%s: %s left of %s.'):format(r.name, left, tm.fmtLeft(r.total))
-                           or ('%s: %s left.'):format(r.name, left))
+        tm.text('text', COL_TEXT, tm.fmtLeft(r.remaining))
     else
         tm.text('text', COL_GOOD, 'ready')
-        tip(('%s: ready.'):format(r.name))
     end
+    jaTip(r)
+end
+
+-- The same ability as a dial alone, for the dials style: the time ON it while
+-- it counts, as the automaton's cells carry theirs, and its short name under
+-- it. As wide as an automaton cell, so the two kinds keep one pitch.
+tm.jaDial = function(r)
+    local sz = cellW()
+    local x, y = imgui.GetCursorScreenPos()
+    dialAt({ x + sz / 2, y + sz / 2 }, sz / 2, r.state, jaFrac(r))
+    local dl = imgui.GetWindowDrawList()
+    imgui.PushFont(tm.font, tm.px('label'))
+    local function centred(txt, ty, col)
+        local tx = x + (sz - imgui.CalcTextSize(txt)) / 2
+        dl:AddText({ tx + tm.s(1), ty + tm.s(1) }, tm.SHADOW, txt)
+        dl:AddText({ tx, ty }, tm.u32(col), txt)
+    end
+    if r.state == 'counting' then
+        centred(tm.fmtLeft(r.remaining), y + (sz - tm.px('label')) / 2, COL_TEXT)
+    end
+    centred(r.short, y + sz + tm.s(1), (r.state == 'ready') and COL_GOOD or COL_DIM)
+    imgui.PopFont()
+    imgui.Dummy({ sz, sz + tm.s(1) + tm.px('label') })
+    jaTip(r)
 end
 
 -- Your own abilities, under the maneuver table: the `you` label, then a cell
@@ -907,25 +944,39 @@ end
 -- for them and the column keeps the height it had before they existed. Every
 -- cell is as wide as the widest label showing plus a value slot that holds
 -- the longest value, so a countdown ticking never moves a neighbour: only an
--- ability coming or going reflows the lines.
-tm.jaGrid = function()
+-- ability coming or going reflows the lines. A dial alone is an automaton
+-- cell's width, at that row's pitch.
+--
+-- The compact strip draws them too, under itself: from x0, `width` wide, and
+-- with no label. Each of its lines needs an item that is not SameLine to begin
+-- it - lineStart, which is the rail's slot - and then is placed like the rest.
+tm.jaGrid = function(x0, width, lineStart)
     local rows = tm.jaRows
     if #rows == 0 then return end
-    local labelW = 0
-    for _, r in ipairs(rows) do
-        local w = tm.width('label', r.label)
-        if w > labelW then labelW = w end
+    x0, width = x0 or hudPad(), width or hudInner()
+    local labelW, cell, gap = 0, cellW(), tm.s(3)
+    if not config.cd_dials then
+        for _, r in ipairs(rows) do
+            local w = tm.width('label', r.label)
+            if w > labelW then labelW = w end
+        end
+        local valueW = math.max(tm.width('text', '00:00'), tm.width('text', 'ready'))
+        cell, gap = (tm.dpx('text') - tm.s(2)) + tm.s(3) + labelW + tm.s(4) + valueW, tm.s(12)
     end
-    local valueW = math.max(tm.width('text', '00:00'), tm.width('text', 'ready'))
-    local cell = (tm.dpx('text') - tm.s(2)) + tm.s(3) + labelW + tm.s(4) + valueW
-    local gap = tm.s(12)
-    local cols = math.max(1, math.floor((hudInner() + gap) / (cell + gap)))
-    tm.text('label', COL_DIM, 'you')
-    tip('Your own job abilities\' recasts, straight from the client. Which\nones, and whether a ready one is listed: Settings, display.')
+    local cols = math.max(1, math.floor((width + gap) / (cell + gap)))
+    if lineStart == nil then
+        tm.text('label', COL_DIM, 'you')
+        tip('Your own job abilities\' recasts, straight from the client. Which\nones, how they are drawn, and whether a ready one is listed:\nSettings, display.')
+    end
     for i, r in ipairs(rows) do
         local col = (i - 1) % cols
-        if col > 0 then imgui.SameLine(hudPad() + col * (cell + gap), 0) end
-        tm.jaCell(r, labelW)
+        if col == 0 and lineStart ~= nil then
+            lineStart()
+            imgui.SameLine(x0, 0)
+        elseif col > 0 then
+            imgui.SameLine(x0 + col * (cell + gap), 0)
+        end
+        if config.cd_dials then tm.jaDial(r) else tm.jaCell(r, labelW) end
     end
 end
 

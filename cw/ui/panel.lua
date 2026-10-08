@@ -172,9 +172,12 @@ end
 -- The strip's pieces. Each takes the absolute x it starts at, so one layout
 -- can lay them out on one line and another on two.
 
--- The rail, h tall from (x, y): the worst live condition as one colour.
-local function rail(x, y, h, pet, maneuvers, overload)
-    imgui.GetWindowDrawList():AddRectFilled({ x, y }, { x + tm.s(3), y + h },
+-- The rail: the worst live condition as one colour, from (x, y) down to the
+-- foot of the last line drawn, which is the item spacing above the cursor.
+-- Drawn last, so it runs down beside however many lines the strip took.
+local function rail(x, y, pet, maneuvers, overload)
+    local _, ey = imgui.GetCursorScreenPos()
+    imgui.GetWindowDrawList():AddRectFilled({ x, y }, { x + tm.s(3), ey - imgui.GetStyle().ItemSpacing.y },
                                             tm.u32(tm.railColour(pet, maneuvers, overload)), tm.s(1.5))
 end
 
@@ -309,13 +312,18 @@ local function buttons()
     imgui.PopFont()
 end
 
+-- Your own recasts under the strip, from x0 to its right edge, in whichever
+-- style the Settings tab picks. Each line is begun by the rail's slot - only
+-- wide enough to start the line - so the rail runs down beside them too.
+local function yours(x0, right)
+    tm.jaGrid(x0, right - x0, function() imgui.Dummy({ tm.s(3), 0 }) end)
+end
+
 -- One line, left to right: the rail, the gems, the answers, the bars, the
--- recasts, the buttons.
+-- recasts, the buttons; your own recasts under it.
 local function oneRow(pet, maneuvers, overload)
     local px, py = imgui.GetCursorScreenPos()
-    local railW, railH = tm.s(3), tm.s(28)
-    rail(px, py, railH, pet, maneuvers, overload)
-    imgui.Dummy({ railW, railH })
+    imgui.Dummy({ tm.s(3), tm.s(28) })
     local x0 = hudPad() + tm.s(3) + tm.s(6)
     gems(x0, maneuvers)
     local xs = x0 + 8 * STEP - tm.s(4) + tm.s(8)
@@ -327,14 +335,18 @@ local function oneRow(pet, maneuvers, overload)
     bars(xb, pet)
     local xr = xb + 2 * (tm.width('label', 'TGT') + tm.s(4) + BAR_W + VIT_GAP) + tm.s(8)
     vsep(xr)
-    imgui.SameLine(recasts(xr + tm.s(9)) + 8, 0)
+    local xButtons = recasts(xr + tm.s(9)) + 8
+    imgui.SameLine(xButtons, 0)
     buttons()
+    yours(x0, xButtons + buttonsW())
+    rail(px, py, pet, maneuvers, overload)
 end
 
 -- Two rows: the gems over the recasts and the buttons, the bars over the
--- answers, and the rail down the side of both. The second column starts at
--- one x on both rows, past whichever left half is wider; the recasts change
--- only with the frame and the attachments, so it never moves mid-fight.
+-- answers, your own recasts under both, and the rail down the side of it
+-- all. The second column starts at one x on both rows, past whichever left
+-- half is wider; the recasts change only with the frame and the attachments,
+-- so it never moves mid-fight.
 local function twoRows(pet, maneuvers, overload)
     local px, py = imgui.GetCursorScreenPos()
     local railW, railH = tm.s(3), tm.s(28)
@@ -356,11 +368,10 @@ local function twoRows(pet, maneuvers, overload)
     vsep(xs)
     imgui.SameLine(xc, 0)
     -- the answers as wide as the bars above them: two columns and the gap
-    answers(2 * (barLabelW() + tm.s(4) + BAR_W) + VIT_GAP)
-    -- The rail last, once both rows are down: from the top of the first to
-    -- the foot of the second, which is the item spacing above the cursor.
-    local _, ey = imgui.GetCursorScreenPos()
-    rail(px, py, ey - imgui.GetStyle().ItemSpacing.y - py, pet, maneuvers, overload)
+    local barsW = 2 * (barLabelW() + tm.s(4) + BAR_W) + VIT_GAP
+    answers(barsW)
+    yours(x0, xc + barsW)
+    rail(px, py, pet, maneuvers, overload)
 end
 
 tm.drawCompact = function()
@@ -529,9 +540,12 @@ local function displayView()
 
     imgui.Separator()
     tm.text('label', COL_DIM, 'ability cooldowns')
-    tip('Your own job abilities, under the Status tab\'s maneuver table: which\nones, and whether a ready one is listed.')
+    tip('Your own job abilities, under the Status tab\'s maneuver table and\nunder the compact strip: which ones, how they are drawn, and whether\na ready one is listed.')
     toggle('hide when ready', 'cd_hide_ready',
            'List an ability only while it is on recast. Off lists every one\nswitched on below, ready or not.')
+    imgui.SameLine(hudPad() + tm.s(180), 0)
+    toggle('as dials', 'cd_dials',
+           'Each ability as a dial alone: the time on it while it counts, a\nshort name under it. Off: a dial, the full name and the time. The\nStatus tab and the compact strip both.')
     local list = tm.jaList
     local half = math.ceil(#list / 2)
     imgui.BeginGroup()

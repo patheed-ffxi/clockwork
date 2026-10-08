@@ -44,6 +44,7 @@ local PERSIST = {
     show_ol_secs      = { 'bool' },
     -- your own job abilities in the recast column (cw/cooldowns.lua)
     cd_hide_ready     = { 'bool' },
+    cd_dials          = { 'bool' },
     cd_activate       = { 'bool' },
     cd_dea            = { 'bool' },
     cd_repair         = { 'bool' },
