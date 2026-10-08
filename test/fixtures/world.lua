@@ -77,7 +77,7 @@ for k, v in pairs({
     [59] = 'Silence', [106] = 'Phalanx', [108] = 'Regen', [110] = 'Regen II', [111] = 'Regen III',
     [143] = 'Erase',
     [144] = 'Fire', [149] = 'Blizzard', [159] = 'Stone', [160] = 'Stone II',
-    [164] = 'Thunder', [165] = 'Thunder II',
+    [164] = 'Thunder', [165] = 'Thunder II', [169] = 'Water',
     -- the tiers the MP ladder actually chooses between, which read as
     -- 'spell 162' until a fixture needed to name one
     [146] = 'Fire III', [147] = 'Fire IV', [151] = 'Blizzard III', [152] = 'Blizzard IV',

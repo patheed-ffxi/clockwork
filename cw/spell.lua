@@ -713,9 +713,12 @@ end
 
 -- TryEnfeeble: two lists, the promoted one walked first; a spell whose
 -- effect the mob already carries is skipped (CanUseEnfeeble; immunity
--- is unreadable). Stormwaker's case offers Dispel alone. Spiritreaver
--- reaches its debuffs only with Dark up and promotes on two of an
--- element; its Aspir and Drain hinge on the mob's MP and family.
+-- is unreadable). Stormwaker puts Dispel, when the target carries
+-- something dispelable, ahead of Harlequin's list: Horizon's server falls
+-- through from that case into the default one, where upstream breaks
+-- after Dispel. Spiritreaver reaches its debuffs only with Dark up and
+-- promotes on two of an element; its Aspir and Drain hinge on the mob's
+-- MP and family.
 local ELEMENT_OF = { [231] = 'Dark', [230] = 'Dark', [254] = 'Dark', [24] = 'Light', [23] = 'Light',
                      [221] = 'Water', [220] = 'Water', [59] = 'Wind', [56] = 'Earth', [58] = 'Ice', [286] = 'Fire' }
 local function tryEnfeeble(ctx, usable)
@@ -726,12 +729,11 @@ local function tryEnfeeble(ctx, usable)
     end
     local function n(el) return c[el] or 0 end
     local mob = ctx.mobHas
-    if ctx.head == 4 then
-        if ctx.mobDispelable then
-            put(true, 260)
-            note[260] = { why = 'enfeeble · the target carries a dispelable effect' }
-        end
-    elseif ctx.head == 6 then
+    if ctx.head == 4 and ctx.mobDispelable then
+        put(true, 260)
+        note[260] = { why = 'enfeeble · the target carries a dispelable effect' }
+    end
+    if ctx.head == 6 then
         if ctx.petMpp < 75 then
             put(true, 248, 247)
             note[248] = { why = 'enfeeble · automaton MP under 75%', uncertain = true }
@@ -765,7 +767,7 @@ local function tryEnfeeble(ctx, usable)
         put(n('Wind') > 0, 59)
         put(n('Ice') > 0, 58)
         put(n('Fire') > 0, 286)
-    else   -- Harlequin, Sharpshot
+    else   -- Harlequin, Sharpshot, Stormwaker
         if not mob(134) then put(n('Dark') > 0, 231) end
         if not mob(135) then put(n('Light') > 0, 24) end
         if not mob(134) then put(n('Dark') > 0, 230) end
