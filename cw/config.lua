@@ -138,6 +138,13 @@ local config =
     -- whatever the chance reads - that row is there for the maneuver, not for
     -- the burden - and a row that can still overload is never hidden.
     hide_zero_ol_rows = false,
+    -- The Status tab's `OL s` column: how long an overload would last if the
+    -- next maneuver of that element caused one - a second for each point of
+    -- burden over the threshold (burden.overloadDuration). The OL% cell's
+    -- tooltip carries the same number either way. Off drops the column, and
+    -- the table and the recast column beside it sit where they did before it
+    -- existed.
+    show_ol_secs = true,
     -- Your own job abilities' recasts, listed under the automaton's in the
     -- Status tab's recast column (cw/cooldowns.lua): a switch for each, and one
     -- that leaves an ability out while it is ready. That one ships off, so

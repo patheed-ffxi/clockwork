@@ -58,6 +58,7 @@ local api = (function()
         petInfo = function() return R.petInfo() end,
         currentFrame = function() return tm.frameNow() end,
         activeManeuvers = function() return B.activeManeuvers() end,
+        overloadDuration = function(el) return B.overloadDuration(el) end,
         maneuverCounts = function() return B.maneuverCounts() end,
         -- the skillchain former and the two property tables it is fed from,
         -- so a fixture chains real weaponskills rather than bare numbers

@@ -139,6 +139,58 @@ do
     api.config.hide_zero_ol_rows = false
     for el, v in pairs(was) do model.burden[el] = v end
 
+    -- ---------------------------------------------------- overload seconds --
+    -- The OL s column: how long an overload would last if the next maneuver of
+    -- that element caused one, drawn after OL%. show_ol_secs off drops it, and
+    -- the table ends where it did before the column existed. Every count is
+    -- taken with the column on and off and compared, so a draw elsewhere in
+    -- the frame at the same offset cannot satisfy it.
+    do
+        local m = api.model()
+        local ALL = { 'Fire', 'Ice', 'Wind', 'Earth', 'Thunder', 'Water', 'Light', 'Dark' }
+        local held = {}
+        for _, el in ipairs(ALL) do held[el] = m.burden[el] m.burden[el] = 0 end
+        world.icons, world.timers = { 300 }, { 0 }      -- one Fire maneuver: one row
+        -- High enough that another Fire maneuver overloads whatever threshold
+        -- the harness's gear gives.
+        m.burden.Fire = 80
+        api.config.show_ol_secs = true
+        frame('OL s on')
+        local dur = api.overloadDuration('Fire')
+        check('precondition: a Fire maneuver now can overload', dur > 0, true)
+        local secs = ('%ds'):format(dur)
+        local on = { head = countExact('OL s'), col = countExact('X:156'), secs = countExact(secs),
+                     side = countExact('X:190'), old = countExact('X:160') }
+        api.config.show_ol_secs = false
+        frame('OL s off')
+        local off = { head = countExact('OL s'), col = countExact('X:156'), secs = countExact(secs),
+                      side = countExact('X:190'), old = countExact('X:160') }
+        check('OL s draws its header', on.head, 1)
+        check('OL s off draws no header', off.head, 0)
+        -- OL% starts at 126 and is 20 wide; this column starts EL_GAP later
+        check('OL s column origin, header and row', on.col - off.col, 2)
+        check('OL s draws the seconds', on.secs - off.secs, 1)
+        -- the recast column follows the table's end: 146 + 14 off, 176 + 14 on
+        check('the recast column moves past OL s', on.side - off.side, 1)
+        check('OL s off puts the recast column back', off.old - on.old, 1)
+
+        -- Nothing to last: a dim dash, never 0s. The row's left cell draws
+        -- '0s' for the stubbed timer, so it is the difference that counts.
+        m.burden.Fire = 1
+        api.config.show_ol_secs = true
+        frame('OL s on, nothing to last')
+        check('precondition: a Fire maneuver now cannot overload', api.overloadDuration('Fire'), 0)
+        local dashOn, zeroOn = countExact('-'), countExact('0s')
+        api.config.show_ol_secs = false
+        frame('OL s off, nothing to last')
+        check('OL s with nothing to last draws a dash', dashOn - countExact('-'), 1)
+        check('OL s with nothing to last draws no 0s', zeroOn - countExact('0s'), 0)
+
+        api.config.show_ol_secs = true
+        for _, el in ipairs(ALL) do m.burden[el] = held[el] end
+        world.icons, world.timers = nil, nil
+    end
+
     api.selectSet('VE tank')
     frame('smoke saved')
     check('render saved cost', sawExact('Fi2'), true)
