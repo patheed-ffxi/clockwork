@@ -227,10 +227,11 @@ end
 local TABS = { { 'status', 'ST', 'Status' }, { 'loadout', 'LO', 'Loadout' },
                { 'tuning', 'TU', 'Tuning' }, { 'settings', 'SE', 'Settings' } }
 tm.tab = 'status'
--- Tuning is two views, not one long tab. `model` is what the tab is
--- opened for - the error, the anomalies, the recast history - so it is
--- the default; the per-element stat checks wait behind their button.
-tm.tuneTab = 'model'
+-- Tuning is two views, not one long tab. `cost` is what the tab is opened
+-- for - each element's stat check and what its next three maneuvers cost,
+-- read before choosing one - so it is the default; the error, the anomalies
+-- and the recast history wait behind the `model` button.
+tm.tuneTab = 'cost'
 -- Settings is two views as well. `display` is what the tab is opened for -
 -- what the panel shows, your own recasts among it - so it is the default;
 -- `logging` holds what is written down and printed.
@@ -937,8 +938,9 @@ end
 -- same way.
 -- Origins are cumulative, each measured off the widest string its column can
 -- actually hold - header or cell, whichever is longer - plus EL_GAP, so they
--- follow whatever font Ashita is running rather than a pixel guess. x[6] is
--- where the table ends and the recast column starts.
+-- follow whatever font Ashita is running rather than a pixel guess. The last
+-- origin, x[#x], is where the table ends and the recast column starts: x[6],
+-- or x[7] with the OL s column on.
 local EL_GAP = 10
 tm.elCols = function()
     local function widest(a, b)
@@ -951,7 +953,13 @@ tm.elCols = function()
     x[3] = x[2] + tm.dpx('text') + gap   -- the gem alone: the name is its tooltip
     x[4] = x[3] + widest('left', '300s') + gap
     x[5] = x[4] + widest('burden', '105') + gap
-    x[6] = x[5] + widest('OL%', '100%')   -- where the table ends
+    x[6] = x[5] + widest('OL%', '100%')   -- where the table ends...
+    -- ...unless the overload's length has a column of its own (show_ol_secs):
+    -- then x[6] is where that starts, and the table ends after it
+    if config.show_ol_secs then
+        x[6] = x[6] + gap
+        x[7] = x[6] + widest('OL s', '100s')
+    end
     return x
 end
 -- `text` cut to `width` at the voice `kind`, with a trailing '..', so a string

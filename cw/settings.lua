@@ -41,6 +41,7 @@ local PERSIST = {
     show_gives        = { 'bool' },
     show_oils         = { 'bool' },
     hide_zero_ol_rows = { 'bool' },
+    show_ol_secs      = { 'bool' },
     -- your own job abilities in the recast column (cw/cooldowns.lua)
     cd_hide_ready     = { 'bool' },
     cd_activate       = { 'bool' },

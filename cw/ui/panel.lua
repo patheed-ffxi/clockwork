@@ -417,6 +417,8 @@ local function displayView()
            'The oils line on the Status tab, and its warning when you have none.')
     toggle('hide burden at 0% OL', 'hide_zero_ol_rows',
            'Drop the row for an element with nothing up when another maneuver\nof it would overload at 0%. A maneuver that is up keeps its burden.')
+    toggle('overload duration', 'show_ol_secs',
+           'The OL s column on the Status tab: how long an overload would last\nif the next maneuver of that element caused one.')
     imgui.EndGroup()
     imgui.SameLine(hudPad() + tm.s(180), 0)
     imgui.BeginGroup()
@@ -590,7 +592,8 @@ local function maneuverRows(maneuvers)
 end
 
 -- One row of the maneuver table: the slot, the gem, the seconds left, the
--- burden and the overload chance of using another, at the columns `cx`.
+-- burden, the overload chance of using another and, with show_ol_secs, how
+-- long that overload would last, at the columns `cx`.
 local function drawManeuverRow(r, cx)
     local p, after = r.p, r.after
     if r.slot ~= nil then
@@ -620,9 +623,29 @@ local function drawManeuverRow(r, cx)
     local col = COL_GOOD
     if p >= config.warn_at then col = COL_BAD
     elseif p > 0 then col = COL_WARN end
+    -- taken once: the tooltips and the column print the same number
+    local dur = overloadDuration(r.el)
     tm.text('text', col, ('%d%%'):format(p))
-    tip(('A %s maneuver now: %d%% overload chance, burden %d -> %d.\nAn overload at that burden lasts %ds.')
-        :format(r.el, p, burden[r.el], after, overloadDuration(r.el)))
+    -- never 'lasts 0s': at or under the threshold there is nothing to last,
+    -- whatever chance the server reports
+    tip(('A %s maneuver now: %d%% overload chance, burden %d -> %d.\n%s')
+        :format(r.el, p, burden[r.el], after,
+                (dur > 0) and ('An overload at that burden lasts %ds.'):format(dur)
+                          or 'Not over the threshold: the server does not roll for an overload.'))
+    if config.show_ol_secs then
+        imgui.SameLine(cx[6], 0)
+        if dur > 0 then
+            -- the OL% cell's colour, so the row's risk reads as one thing
+            tm.text('text', col, ('%ds'):format(dur))
+            tip(('If a %s maneuver now overloads, no maneuvers for %ds:\na second for each point of burden over the threshold.')
+                :format(r.el, dur))
+        else
+            -- not '0s': there is no overload to last. OL% can still read 1-5%
+            -- here - the reported chance has no threshold gate, the roll does.
+            tm.text('text', COL_DIM, '-')
+            tip(('A %s maneuver now leaves burden at or under the threshold,\nand the server only rolls for an overload above it.'):format(r.el))
+        end
+    end
 end
 
 -- The maneuver table as one group: its header and a row each, or a dim
@@ -643,6 +666,11 @@ local function drawManeuverTable(rows, cx, hid)
         imgui.SameLine(cx[3], 0) tm.text('label', COL_DIM, 'left')
         imgui.SameLine(cx[4], 0) tm.text('label', COL_DIM, 'burden')
         imgui.SameLine(cx[5], 0) tm.text('label', COL_DIM, 'OL%')
+        -- the same overload's length, if it happens - named as OL% is, by
+        -- its number; the cell's tooltip says it outright
+        if config.show_ol_secs then
+            imgui.SameLine(cx[6], 0) tm.text('label', COL_DIM, 'OL s')
+        end
         for _, r in ipairs(rows) do
             drawManeuverRow(r, cx)
         end
@@ -656,7 +684,7 @@ local function drawRecastColumn(cx, lines, buffs)
     -- The column, at the same x whether or not the table drew a row:
     -- the recasts belong to the right of the maneuvers, not to
     -- whatever is left over after them.
-    imgui.SameLine(cx[6] + 14, 0)
+    imgui.SameLine(cx[#cx] + 14, 0)
     imgui.BeginGroup()
     local spill = tm.sideColumn(lines, buffs)
     imgui.EndGroup()

@@ -133,16 +133,17 @@ do
     check('settings restored a bool', cfg.anomaly_chat, false)
     check('settings restored another bool', cfg.show_reasoning, false)
     check('settings restored an int', cfg.ui_scale, 120)
-    -- the four line switches are on the whitelist too
-    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows = false, false, false, true
+    -- the five line switches are on the whitelist too
+    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows, cfg.show_ol_secs = false, false, false, true, false
     api.saveSettings()
-    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows = true, true, true, false
+    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows, cfg.show_ol_secs = true, true, true, false, true
     api.loadSettings()
     check('settings restored show_ws', cfg.show_ws, false)
     check('settings restored show_gives', cfg.show_gives, false)
     check('settings restored show_oils', cfg.show_oils, false)
     check('settings restored hide_zero_ol_rows', cfg.hide_zero_ol_rows, true)
-    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows = true, true, true, false
+    check('settings restored show_ol_secs', cfg.show_ol_secs, false)
+    cfg.show_ws, cfg.show_gives, cfg.show_oils, cfg.hide_zero_ol_rows, cfg.show_ol_secs = true, true, true, false, true
 
     -- what the file actually holds: stable order, one key a line, and NOTHING
     -- from the model. A calibration constant in here is the bug this guards.

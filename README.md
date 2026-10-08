@@ -14,7 +14,8 @@ prediction did *not* match the server, so the model can be corrected from real p
 
 - **Burden and overload per element.** Burden is tracked for all eight elements
   separately, with the current overload chance, the chance your *next* maneuver would
-  create, and how long an overload would last. The threshold is read off the gear you are
+  create, and how long an overload would last (the **OL s** column; **overload duration**
+  on the Settings tab turns it off). The threshold is read off the gear you are
   actually wearing, so a Fire maneuver in Puppetry Dastanas resolves at a different number
   than a Water maneuver in Devotee's Mitts. An element with nothing up that cannot
   overload anything yet can be hidden from the table (**hide burden at 0% OL**, Settings
