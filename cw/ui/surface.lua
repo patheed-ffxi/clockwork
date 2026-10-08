@@ -227,10 +227,11 @@ end
 local TABS = { { 'status', 'ST', 'Status' }, { 'loadout', 'LO', 'Loadout' },
                { 'tuning', 'TU', 'Tuning' }, { 'settings', 'SE', 'Settings' } }
 tm.tab = 'status'
--- Tuning is two views, not one long tab. `model` is what the tab is
--- opened for - the error, the anomalies, the recast history - so it is
--- the default; the per-element stat checks wait behind their button.
-tm.tuneTab = 'model'
+-- Tuning is two views, not one long tab. `cost` is what the tab is opened
+-- for - each element's stat check and what its next three maneuvers cost,
+-- read before choosing one - so it is the default; the error, the anomalies
+-- and the recast history wait behind the `model` button.
+tm.tuneTab = 'cost'
 -- Settings is two views as well. `display` is what the tab is opened for -
 -- what the panel shows, your own recasts among it - so it is the default;
 -- `logging` holds what is written down and printed.

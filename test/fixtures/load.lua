@@ -152,6 +152,9 @@ local api = (function()
         cog = function(x, y, r, c) return tm.cog(x, y, r, c) end,
         tuneTab = function() return tm.tuneTab end,
         selectTuneTab = function(t) tm.tuneTab = t end,
+        -- the addon's own default view, read here because the api is built
+        -- after the addon loads and before the line below the api pins it
+        tuneTabDefault = tm.tuneTab,
         settingsView = function() return tm.settingsView end,
         sideColumn = function(lines, buffs) return tm.sideColumn(lines, buffs) end,
         fontLoad = function() return tm.fontLoad() end, px = function(k) return tm.px(k) end,
@@ -179,6 +182,9 @@ local api = (function()
 end)()
 shadowCol = api.SHADOW   -- the shadow pass is not a drawn string
 api.selectTab('all')   -- the harness draws every tab each frame, as the ImGui stub always did
+-- ...but Tuning still draws one view at a time, and the suites read its model
+-- view from 04 on. The addon's own default is api.tuneTabDefault (suite 12).
+api.selectTuneTab('model')
 check('registered packet_in', handlers['packet_in'] ~= nil, true)
 check('registered d3d_present', handlers['d3d_present'] ~= nil, true)
 check('registered load', handlers['load'] ~= nil, true)

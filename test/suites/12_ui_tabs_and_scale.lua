@@ -213,10 +213,11 @@ do
     check('no doubled separator in the sets path',
           api.setsDir():find('//', 1, true), nil)
     check('the prediction switch is plainer', saw('predictions to chat'), true)
-    -- Tuning is two views behind two buttons, not one long tab: the error and
-    -- the anomaly count are what it is opened for, so `model` is the default
-    -- and the per-element stat checks wait behind their own button.
-    check('tuning defaults to the model', api.tuneTab(), 'model')
+    -- Tuning is two views behind two buttons, not one long tab. It opens on
+    -- `maneuver cost`; the harness pins `model` (fixtures/load.lua) because the
+    -- suites before this one read it, so the real default is checked here.
+    check('tuning opens on the maneuver cost', api.tuneTabDefault, 'cost')
+    check('the harness pinned the model', api.tuneTab(), 'model')
     check('tuning offers both views',
           saw('BTN:model##cw_tune') and saw('BTN:maneuver cost##cw_tune'), true)
     check('tuning shows the model', saw('  anomalies'), true)
