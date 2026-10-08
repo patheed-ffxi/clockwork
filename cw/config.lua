@@ -170,9 +170,12 @@ local config =
     -- between maneuvers does not need. The header's ? button and the Settings
     -- tab toggle it, and the choice is saved.
     sidebar     = false,
-    -- The one-line layout: gems, the answers, the bars, the recasts. Its own
+    -- The compact layout: gems, the answers, the bars, the recasts. Its own
     -- window, so its position is remembered apart from the panel's.
     compact     = false,
+    -- ...on one line, or on two: the gems over the recasts, the bars over the
+    -- answers. The strip's 1 / 2 button and /cw compact 1 or 2 set it.
+    compact_rows = 1,
     -- How big the HUD draws, as a percent. 100 is the size every offset in
     -- this addon was laid out at; the Settings tab sets it. Everything
     -- scales together - text, gems, bars, padding

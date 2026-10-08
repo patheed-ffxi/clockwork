@@ -358,6 +358,52 @@ do
     end
     check('a tooltip was recorded at all', tips > 0, true)
     world.hover = nil
+    -- Two rows: the gems over the recasts and the buttons, the bars over the
+    -- answers. The gems run from 17 to 205; two recasts and the buttons end
+    -- short of that (17 + 2 x 27 + 8 = 79, then 4 x (20 + 8) + 3 x 3 = 121
+    -- more, to 200), so the second column is where the one-row strip's
+    -- answers start - 205 + 8 to the separator, 9 on to 222 - on both rows.
+    check('one row offers two', saw('BTN:2##cw_rows'), true)
+    clicks['2##cw_rows'] = true
+    frame('compact to two rows')
+    check('the button picks two rows', cfg.compact_rows, 2)
+    cfg.compact_rows = 1
+    check('...and wrote the file', api.loadSettings() and cfg.compact_rows, 2)
+    frame('compact two rows')
+    check('two rows: still the compact window', saw('WINDOW:clockwork compact'), true)
+    -- A row is begun by an item placed without SameLine; the rail's slot is
+    -- that item on both, or the recasts would land on the gems' line.
+    check('two rows: the rail keeps its slot on each', countExact('DUMMY:3:28'), 2)
+    check('two rows: the gems and the recasts both start at 17', countExact('X:17'), 2)
+    check('two rows: the bars and the answers share a column', countExact('X:222'), 2)
+    check('two rows offers one', saw('BTN:1##cw_rows'), true)
+    check('two rows: the way back stays', saw('BTN:full##cw_layout'), true)
+    -- ...and the answers get the bars' width. At 7 px a character 'no valid
+    -- weaponskill' is 140: past the one-row strip's 120, inside the bars'
+    -- 21 + 4 + 44 + 10 + 21 + 4 + 44 = 148 (lblW is TGT's 21 at that rate).
+    world.textWidth = true
+    frame('compact two rows, measured')
+    check('two rows: the answer has the bars\' width', sawExact('no valid weaponskill'), true)
+    cfg.compact_rows = 1
+    frame('compact one row, measured')
+    check('one row: the same answer is cut', sawExact('no valid weaponskill'), false)
+    world.textWidth = nil
+    cfg.compact_rows = 2
+    clicks['1##cw_rows'] = true
+    frame('compact back to one row')
+    check('the button goes back to one row', cfg.compact_rows, 1)
+    -- With a number the command picks the rows and the strip; it does not
+    -- toggle, so it is safe to send from a macro whichever layout is up.
+    cfg.compact_rows = 1
+    handlers['command']({ command = '/cw compact 2' })
+    check('/cw compact 2 picks two rows', cfg.compact_rows, 2)
+    check('...and stays on the strip', cfg.compact, true)
+    cfg.compact_rows = 1
+    check('/cw compact 2 wrote the file', api.loadSettings() and cfg.compact_rows, 2)
+    cfg.compact, cfg.compact_rows = false, 2
+    handlers['command']({ command = '/cw compact 1' })
+    check('/cw compact 1 picks one row', cfg.compact_rows, 1)
+    check('...and the strip, from the panel', cfg.compact, true)
     clicks['full##cw_layout'] = true
     frame('compact switch')
     check('the button returns to the panel', cfg.compact, false)
