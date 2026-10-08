@@ -58,6 +58,8 @@ prediction did *not* match the server, so the model can be corrected from real p
 the recasts and the buttons, the bars over the weaponskill and spell. `/cw compact 1`,
 or the `1` button, goes back to one.
 
+![The compact layout on two rows](screenshots/compact_two_rows.png)
+
 ## Install
 
 1. Download the latest `clockwork.zip` from
