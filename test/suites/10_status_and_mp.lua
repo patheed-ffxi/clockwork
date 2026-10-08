@@ -9,7 +9,7 @@
 do
     world.hp, world.maxhp = 1000, 1000
     world.petHpp, world.petMpp = 100, 29          -- 87..89: the tier straddles 88
-    world.icons, world.timers = nil, nil
+    world.icons, world.timers = { 301 }, { 0 }    -- Ice: the nuke comes before the enfeeble rung
     world.buffer = { 4, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     advance(30)
     petOut(PET + 64, MOB + 64)
@@ -37,6 +37,7 @@ do
     check('a confident miss still is an anomaly', CLOCKWORK_TEST.last.kind, 'spell_mispredicted')
     frame('confident counters')
     check('and it counts', saw('spells 1, mispredicted 1'), true)
+    world.icons, world.timers = nil, nil
 end
 
 -- ------------------------ an inferred status is bounded, never open-ended --

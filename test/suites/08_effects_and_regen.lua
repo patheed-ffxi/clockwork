@@ -436,7 +436,7 @@ end
 do
     world.hp, world.maxhp = 1000, 1000        -- nobody hurt: the heal rung declines
     world.petHpp, world.petMpp = 100, 29
-    world.icons, world.timers = nil, nil
+    world.icons, world.timers = { 301 }, { 0 }  -- Ice: the nuke comes before the enfeeble rung
     world.buffer = { 4, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     advance(30)
     petOut(PET + 57, MOB + 57)
@@ -457,6 +457,7 @@ do
     check('below the boundary it is a tier-2 nuke', name, 'Aero III')
     check('...stated plainly', mode == 'uncertain', false)
     world.petMpp = 100
+    world.icons, world.timers = nil, nil
     handlers['d3d_present']()
 end
 

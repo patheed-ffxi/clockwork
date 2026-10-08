@@ -353,11 +353,12 @@ do
     advance(2.5)
     world.hp = 1000
     advance(12)   -- every window this section stamped reopens before the next head
-    -- Stormwaker: nukes, and Dispel alone in its enfeeble rung. Its magic window is
-    -- 10s where Soulsoother's was 4, so the last cast start has to age out before
-    -- the head changes or every prediction below reads 'closed'.
+    -- Stormwaker: nukes, and Dispel ahead of its enfeeble list (the list itself is
+    -- the Stormwaker block below). Its magic window is 10s where Soulsoother's
+    -- was 4, so the last cast start has to age out before the head changes or
+    -- every prediction below reads 'closed'.
     advance(10)
-    world.icons, world.timers = { 42, 40, 41, 33 }, { 0, 0, 0, 0 }
+    world.icons, world.timers = { 42, 40, 41, 33, 301 }, { 0, 0, 0, 0, 0 }   -- Ice: the nuke rung before enfeeble
     send044({ head = 4, frame = 35, magic = 120, hp = 600, maxhp = 600, mp = 300, maxmp = 300 })
     name, why, mode, rung = predict()
     -- NOT Thunder: the tier walks down from 4 and takes the first CASTABLE spell in
@@ -367,6 +368,7 @@ do
     check('sw thunder', name, 'Stone II')
     check('sw thunder rung', rung, 'elemental')
     send028({ actor = MOB + 2, category = 4, param = 43, targets = { { id = MOB + 2, actions = { { message = 230, param = 40 } } } } })
+    world.icons, world.timers = { 42, 40, 41, 33 }, { 0, 0, 0, 0 }
     name = predict()
     check('sw dispel', name, 'Dispel')
     world.icons, world.timers = { 42, 40, 41, 33, 301 }, { 0, 0, 0, 0, 0 }   -- Ice: the nuke rung before enfeeble
@@ -448,10 +450,11 @@ do
     api.clear044()
     world.buffer = { 4, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     advance(2.5)
-    world.icons, world.timers = nil, nil
+    world.icons, world.timers = { 301 }, { 0 }   -- Ice: the nuke rung before enfeeble
     name, why, mode, rung = predict()
     check('no 044 nuke rung', rung, 'elemental')
     check('no 044 nuke uncertain', mode, 'uncertain')
+    world.icons, world.timers = nil, nil
     send044({ head = 4, frame = 35, magic = 120, hp = 600, maxhp = 600, mp = 300, maxmp = 300 })
     -- a Valoredge frame never casts; a closed magic window says how long.
     -- Said on the 0x044 as well as in the buffer: since 1.10.0 the ladder
@@ -527,6 +530,63 @@ do
     send044({ head = 5, frame = 33, magic = 120, hp = 600, maxhp = 600, mp = 300, maxmp = 300 })
     frame('spell line valoredge')
     check('spell line absent', sawExact('Spell'), false)
+    world.buffer = { 2, 33, 5, 4, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0 }
+    advance(2.5)
+end
+
+-- -------------------------------------------- Stormwaker's enfeeble list --
+-- Horizon's Stormwaker casts Dispel when the target carries something
+-- dispelable, then walks the list the other enfeebling heads walk - Dia,
+-- Poison, Blind and the rest, a maneuver promoting its own. Issue #1's log,
+-- replayed: Stormwaker head and frame, magic 30, 221 MP at 61%, a fresh mob,
+-- the master at full HP. The model offered Dispel alone there, so it named
+-- Water (or a Cure) while the automaton cast Dia, Blind and Poison.
+do
+    world.hp, world.maxhp, world.petHpp, world.petMpp = 1000, 1000, 100, 61
+    world.icons, world.timers = nil, nil
+    world.buffer = { 4, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    advance(2.5)
+    send044({ head = 4, frame = 35, magic = 30, hp = 300, maxhp = 300, mp = 135, maxmp = 221 })
+    petOut(PET + 6, MOB + 6)
+    send028({ actor = PET + 6, category = 1, param = 0, targets = { { id = MOB + 6, actions = { { message = 1, param = 12 } } } } })
+    advance(40)   -- every window the blocks above stamped, the 33s nuke one too
+    local name, why, mode, rung = api.predictSpell()
+    check('sw list order', name, 'Dia')
+    check('sw list order rung', rung, 'enfeeble')
+    check('sw list order why', why, 'enfeeble · list order')
+    -- Dark promotes Blind (Bio, ahead of it, needs skill 33)
+    world.icons, world.timers = { 307 }, { 0 }
+    name, why, mode = api.predictSpell()
+    check('sw dark blind', name, 'Blind')
+    check('sw dark blind promoted', mode, 'maneuver')
+    world.icons, world.timers = nil, nil
+    -- with no Light up the enfeeble rung comes before the heal: the automaton
+    -- at 36% still gets a Dia, not a Cure
+    world.petHpp = 36
+    name = api.predictSpell()
+    check('sw enfeeble before heal', name, 'Dia')
+    world.petHpp = 100
+    -- the Dia the line names is logged as predicted, not as a miss
+    frame('sw spell line')
+    CLOCKWORK_TEST.last = nil
+    send028(act(8, 23, MOB + 6))
+    check('sw dia logged as predicted', CLOCKWORK_TEST.last and CLOCKWORK_TEST.last.kind, 'pet_spell')
+    -- that cast shut the magic window (10s) and the enfeeble one (12s): once
+    -- the magic one reopens, the nuke is what the shut rung leaves
+    advance(10.5)
+    name, why, mode, rung = api.predictSpell()
+    check('sw nuke behind a shut enfeeble window', name, 'Water')
+    check('sw nuke behind a shut enfeeble window rung', rung, 'elemental')
+    -- Dispel leads, ahead of what a maneuver promotes: Dark up and a Protect
+    -- on the mob is Dispel, not Bio II (Dispel needs skill 105)
+    advance(2)
+    send044({ head = 4, frame = 35, magic = 120, hp = 300, maxhp = 300, mp = 135, maxmp = 221 })
+    send028({ actor = MOB + 6, category = 4, param = 43, targets = { { id = MOB + 6, actions = { { message = 230, param = 40 } } } } })
+    world.icons, world.timers = { 307 }, { 0 }
+    name = api.predictSpell()
+    check('sw dispel ahead of the promoted list', name, 'Dispel')
+    world.icons, world.timers = nil, nil
+    world.petMpp = 100
     world.buffer = { 2, 33, 5, 4, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0 }
     advance(2.5)
 end
