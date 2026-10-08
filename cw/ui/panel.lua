@@ -168,6 +168,116 @@ local function answers()
         .. ('Spell %s\n%s'):format((sp and sp.name) or '-', (sp and sp.why) or ''))
 end
 
+-- The strip's pieces. Each takes the absolute x it starts at, so one layout
+-- can lay them out on one line and another on two.
+
+-- The rail, h tall from (x, y): the worst live condition as one colour.
+local function rail(x, y, h, pet, maneuvers, overload)
+    imgui.GetWindowDrawList():AddRectFilled({ x, y }, { x + tm.s(3), y + h },
+                                            tm.u32(tm.railColour(pet, maneuvers, overload)), tm.s(1.5))
+end
+
+-- The eight gems from x0: count and the oldest maneuver's seconds per element.
+local function gems(x0, maneuvers)
+    local cnt, rem = {}, {}
+    for _, m in ipairs(maneuvers) do
+        cnt[m.element] = (cnt[m.element] or 0) + 1
+        if rem[m.element] == nil then rem[m.element] = m.remaining end   -- oldest first
+    end
+    for i, el in ipairs(ELEMENTS) do
+        imgui.SameLine(x0 + (i - 1) * STEP, 0)
+        gemCell(el, cnt[el] or 0, rem[el])
+    end
+end
+
+-- HP, MP, TP and the target's HP as four thin bars, from xb.
+local function bars(xb, pet)
+    local hpp = pet.hpp or 0
+    local hpCol = COL_GOOD
+    if hpp < 40 then hpCol = COL_BAD elseif hpp < 75 then hpCol = COL_WARN end
+    local tp = pet.tp or 0
+    local mob = (config.show_target and tm.petTarget ~= 0) and tm.mobSlot() or nil
+    local mobHpp = mob and tm.mobHpp(mob) or 0
+    -- Two columns of two: HP over MP, TP over TGT. Four stacked made a
+    -- one-line strip four rows tall; four in a row made it half as wide
+    -- again as the rest of the strip put together.
+    --
+    -- These DO sit in a group, and the offsets below are therefore
+    -- measured from the group's own x rather than the window's -
+    -- BeginGroup sets ImGui's indent to where the group started, so a
+    -- window-absolute offset would be applied twice and put the bars
+    -- against the right edge.
+    local lblW = 0
+    for _, t in ipairs({ 'HP', 'MP', 'TP', 'TGT' }) do
+        local w = tm.width('label', t)
+        if w > lblW then lblW = w end
+    end
+    local vitW = lblW + tm.s(4) + BAR_W + VIT_GAP
+    imgui.SameLine(xb, 0)
+    imgui.BeginGroup()
+    -- col 0 opens a row and col 1 joins it; tm.bar ends with a Dummy, so
+    -- the widget after a col-1 bar starts the next row on its own.
+    local function cell(col, lbl, frac, c)
+        local x = col * vitW
+        if col > 0 then imgui.SameLine(x, 0) end
+        tm.text('label', COL_DIM, lbl)
+        imgui.SameLine(x + lblW + tm.s(4), 0)
+        tm.bar(nil, frac, nil, c, BAR_W)
+    end
+    cell(0, 'HP', hpp / 100, hpCol)
+    cell(1, 'TP', math.min(tp, 1000) / 1000, (tp >= 1000) and COL_TPUP or COL_TP)
+    -- an MP read that failed on its own is nil: an empty, dim bar and
+    -- '?' in the tooltip, not the 0% of an empty pool
+    cell(0, 'MP', (pet.mpp or 0) / 100, pet.mpp and COL_MP or COL_DIM)
+    cell(1, 'TGT', mobHpp / 100, COL_MOB)
+    imgui.EndGroup()
+    -- Engaged with a target the client cannot see this frame is not
+    -- 'no target': the full panel's row says 'out of sight', so this does.
+    tip(('HP %d%%  MP %s  TP %d\n%s'):format(hpp, pet.mpp and (pet.mpp .. '%') or '?', tp,
+        mob and ('%s %d%%'):format(tm.targetName(), mobHpp)
+        or (config.show_target and tm.petTarget ~= 0) and (tm.targetName() .. ' - out of sight')
+        or 'no target'))
+end
+
+-- The recast squares from xr; returns the x just past the last.
+local function recasts(xr)
+    -- pitch from the cell itself: it is sized to hold the countdown
+    local step = cellW() + tm.s(3)
+    for i, r in ipairs(tm.rows) do
+        imgui.SameLine(xr + (i - 1) * step, 0)
+        abilityCell(r, true)
+        local _, of = abilityArt(r)
+        tip(('%s%s: %s'):format(r.name, of and (' (' .. of .. ')') or '',
+                                (r.state == 'counting' and tm.fmtLeft(r.remaining))
+                                  or (r.state == 'ready' and 'ready') or 'not used since load'))
+    end
+    return xr + #tm.rows * step
+end
+
+-- The buttons: the what-if window, the way back, and hiding the strip.
+local function buttons()
+    imgui.PushFont(tm.font, tm.px('label'))
+    if imgui.SmallButton('?##cw_side2') then
+        config.sidebar = not config.sidebar
+        tm.sidebarInvalidate()
+        tm.saveSettings()
+    end
+    tip('What each maneuver would change if you use it now.')
+    imgui.SameLine(0, tm.s(3))
+    if imgui.SmallButton('full##cw_layout') then
+        config.compact = false
+        tm.saveSettings()
+    end
+    tip('Back to the full panel. Same as /cw compact.')
+    imgui.SameLine(0, tm.s(3))
+    if imgui.SmallButton('x##cw_close') then
+        config.show_window = false
+        tm.saveSettings()
+    end
+    tip('Hide the strip. /cw show brings it back.')
+    imgui.PopFont()
+end
+
 tm.drawCompact = function()
     local pet = petInfo()
     local maneuvers, overload = activeManeuvers()
@@ -178,112 +288,24 @@ tm.drawCompact = function()
             tm.text('text', COL_DIM, 'no automaton out')
             imgui.SameLine(0, tm.s(12))
         else
-            -- the rail
             local px, py = imgui.GetCursorScreenPos()
             local railW, railH = tm.s(3), tm.s(28)
-            imgui.GetWindowDrawList():AddRectFilled({ px, py }, { px + railW, py + railH },
-                                                    tm.u32(tm.railColour(pet, maneuvers, overload)), tm.s(1.5))
+            rail(px, py, railH, pet, maneuvers, overload)
             imgui.Dummy({ railW, railH })
-            -- the gems: count and the oldest maneuver's seconds per element
-            local cnt, rem = {}, {}
-            for _, m in ipairs(maneuvers) do
-                cnt[m.element] = (cnt[m.element] or 0) + 1
-                if rem[m.element] == nil then rem[m.element] = m.remaining end   -- oldest first
-            end
             local x0 = hudPad() + tm.s(3) + tm.s(6)
-            for i, el in ipairs(ELEMENTS) do
-                imgui.SameLine(x0 + (i - 1) * STEP, 0)
-                gemCell(el, cnt[el] or 0, rem[el])
-            end
+            gems(x0, maneuvers)
             local xs = x0 + 8 * STEP - tm.s(4) + tm.s(8)
             vsep(xs)
             imgui.SameLine(xs + tm.s(9), 0)
             answers()
             vsep(xs + tm.s(9) + TEXT_W + tm.s(8))
-            -- HP, MP, TP and the target's HP as four thin bars
             local xb = xs + tm.s(9) + TEXT_W + tm.s(8) + tm.s(9)
-            local hpp = pet.hpp or 0
-            local hpCol = COL_GOOD
-            if hpp < 40 then hpCol = COL_BAD elseif hpp < 75 then hpCol = COL_WARN end
-            local tp = pet.tp or 0
-            local mob = (config.show_target and tm.petTarget ~= 0) and tm.mobSlot() or nil
-            local mobHpp = mob and tm.mobHpp(mob) or 0
-            -- Two columns of two: HP over MP, TP over TGT. Four stacked made a
-            -- one-line strip four rows tall; four in a row made it half as wide
-            -- again as the rest of the strip put together.
-            --
-            -- These DO sit in a group, and the offsets below are therefore
-            -- measured from the group's own x rather than the window's -
-            -- BeginGroup sets ImGui's indent to where the group started, so a
-            -- window-absolute offset would be applied twice and put the bars
-            -- against the right edge.
-            local lblW = 0
-            for _, t in ipairs({ 'HP', 'MP', 'TP', 'TGT' }) do
-                local w = tm.width('label', t)
-                if w > lblW then lblW = w end
-            end
-            local vitW = lblW + tm.s(4) + BAR_W + VIT_GAP
-            imgui.SameLine(xb, 0)
-            imgui.BeginGroup()
-            -- col 0 opens a row and col 1 joins it; tm.bar ends with a Dummy, so
-            -- the widget after a col-1 bar starts the next row on its own.
-            local function cell(col, lbl, frac, c)
-                local x = col * vitW
-                if col > 0 then imgui.SameLine(x, 0) end
-                tm.text('label', COL_DIM, lbl)
-                imgui.SameLine(x + lblW + tm.s(4), 0)
-                tm.bar(nil, frac, nil, c, BAR_W)
-            end
-            cell(0, 'HP', hpp / 100, hpCol)
-            cell(1, 'TP', math.min(tp, 1000) / 1000, (tp >= 1000) and COL_TPUP or COL_TP)
-            -- an MP read that failed on its own is nil: an empty, dim bar and
-            -- '?' in the tooltip, not the 0% of an empty pool
-            cell(0, 'MP', (pet.mpp or 0) / 100, pet.mpp and COL_MP or COL_DIM)
-            cell(1, 'TGT', mobHpp / 100, COL_MOB)
-            imgui.EndGroup()
-            -- Engaged with a target the client cannot see this frame is not
-            -- 'no target': the full panel's row says 'out of sight', so this does.
-            tip(('HP %d%%  MP %s  TP %d\n%s'):format(hpp, pet.mpp and (pet.mpp .. '%') or '?', tp,
-                mob and ('%s %d%%'):format(tm.targetName(), mobHpp)
-                or (config.show_target and tm.petTarget ~= 0) and (tm.targetName() .. ' - out of sight')
-                or 'no target'))
-            -- the recast squares
+            bars(xb, pet)
             local xr = xb + 2 * (tm.width('label', 'TGT') + tm.s(4) + BAR_W + VIT_GAP) + tm.s(8)
             vsep(xr)
-            xr = xr + tm.s(9)
-            -- pitch from the cell itself: it is sized to hold the countdown
-            local step = cellW() + tm.s(3)
-            for i, r in ipairs(tm.rows) do
-                imgui.SameLine(xr + (i - 1) * step, 0)
-                abilityCell(r, true)
-                local _, of = abilityArt(r)
-                tip(('%s%s: %s'):format(r.name, of and (' (' .. of .. ')') or '',
-                                        (r.state == 'counting' and tm.fmtLeft(r.remaining))
-                                          or (r.state == 'ready' and 'ready') or 'not used since load'))
-            end
-            imgui.SameLine(xr + #tm.rows * step + 8, 0)
+            imgui.SameLine(recasts(xr + tm.s(9)) + 8, 0)
         end
-        -- the two buttons: the what-if window, and the way back
-        imgui.PushFont(tm.font, tm.px('label'))
-        if imgui.SmallButton('?##cw_side2') then
-            config.sidebar = not config.sidebar
-            tm.sidebarInvalidate()
-            tm.saveSettings()
-        end
-        tip('What each maneuver would change if you use it now.')
-        imgui.SameLine(0, tm.s(3))
-        if imgui.SmallButton('full##cw_layout') then
-            config.compact = false
-            tm.saveSettings()
-        end
-        tip('Back to the full panel. Same as /cw compact.')
-        imgui.SameLine(0, tm.s(3))
-        if imgui.SmallButton('x##cw_close') then
-            config.show_window = false
-            tm.saveSettings()
-        end
-        tip('Hide the strip. /cw show brings it back.')
-        imgui.PopFont()
+        buttons()
         wx, wy = imgui.GetWindowPos()
     end
     imgui.End()
