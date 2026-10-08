@@ -298,3 +298,116 @@ do
     suiteLogging()
     world.abilities, world.recast = {}, {}
 end
+
+-- The dials style, the Settings tab's `as dials`: each of your abilities as a
+-- dial alone - the time on it while it counts, a short name under it - at the
+-- automaton cells' pitch. Off, the default, is the dial, the name and the time.
+do
+    local c = api.config
+    check('dials ship off: names and times', c.cd_dials, false)
+    api.selectTab('status')
+    learnAll()
+    c.cd_hide_ready, c.cd_dials = false, true
+    world.recast = { [3] = { 206, 2820 } }        -- Repair, 47 s
+    frame('ja dials: Repair counting')
+    check('dials keep the you label', sawExact('you'), true)
+    check('a dial is named short', sawExact('Rep'), true)
+    -- exact: the oils line's 'Repair and Maintenance unusable' is not a cell
+    check('...not by its full name', sawExact('Repair'), false)
+    check('...with its seconds on it', sawExact('47s'), true)
+    check('a ready one is named too', sawExact('Act'), true)
+    -- Deus Ex and Deactivate both begin Dea: DEA is the usual shorthand for
+    -- Deus Ex Automata, so Deactivate is Dct.
+    c.cd_deactivate = true
+    frame('ja dials: Deactivate listed')
+    check('Deus Ex is DEA', sawExact('DEA'), true)
+    check('Deactivate is Dct', sawExact('Dct'), true)
+    -- A dial is as wide as an automaton cell - 24 here, 20 for the widest of
+    -- 00s and 0:00, plus 4 - with 3 between, so the second sits at 8 + 27 = 35.
+    -- Ten listed (Retrieve ships off) fit one line: (364 + 3) / 27 holds 13.
+    api.jaRefresh()
+    drawn = {}
+    api.jaGrid()
+    check('the second dial is one cell on', sawExact('X:35'), true)
+    check('...the tenth on the same line', sawExact('X:' .. tostring(8 + 9 * 27)), true)
+    local xs = 0
+    for _, d in ipairs(drawn) do if d:find('^X:') then xs = xs + 1 end end
+    check('...every one after the first placed on it', xs, 9)
+
+    api.selectTab('settings')
+    frame('ja dials: settings')
+    check('the dials switch is on the display view', saw('BTN:as dials##cw_set_cd_dials'), true)
+    clicks['as dials##cw_set_cd_dials'] = true
+    frame('ja dials: switched off')
+    check('a click switches dials off', c.cd_dials, false)
+    c.cd_dials = true
+    api.saveSettings()
+    c.cd_dials = false
+    api.loadSettings()
+    check('dials are saved', c.cd_dials, true)
+    api.restoreDefaults()
+    check('restore goes back to names and times', c.cd_dials, false)
+    suiteLogging()
+    api.selectTab('all')
+    world.abilities, world.recast = {}, {}
+end
+
+-- On the compact strip: a row of your own under the strip, in either layout,
+-- from under the gems (x 17) to the strip's right edge and with no you label,
+-- in whichever style the switch picks. Each line of it is begun by the rail's
+-- slot - a 3 x 0 Dummy, which only starts the line - so the rail runs down
+-- beside it.
+do
+    local c = api.config
+    local function xBefore(text)
+        local last = nil
+        for _, d in ipairs(drawn) do
+            if d:find('^X:') then last = tonumber(d:sub(3))
+            elseif d == text then return last end
+        end
+        return nil
+    end
+    learnAll()
+    petOut()
+    c.compact, c.compact_rows, c.cd_hide_ready, c.cd_dials = true, 1, true, false
+    world.recast = {}
+    frame('ja compact: nothing counting')
+    check('nothing counting: no row under the strip', countExact('DUMMY:3:0'), 0)
+    world.recast = { [3] = { 206, 2820 } }        -- Repair, 47 s
+    frame('ja compact: one row, Repair counting')
+    check('a counting ability adds a row under the strip', countExact('DUMMY:3:0'), 1)
+    check('...naming it', sawExact('Repair'), true)
+    check('...with its seconds', sawExact('47s'), true)
+    check('...from under the gems', countExact('X:17'), 2)
+    check('...and no you label on the strip', sawExact('you'), false)
+    -- dials at the cells' pitch: 17, then 17 + 27 = 44 (nothing else on the
+    -- one-row strip sits at 44)
+    c.cd_hide_ready, c.cd_dials = false, true
+    frame('ja compact: one row, dials')
+    check('the strip draws dials when the switch says so', sawExact('Rep'), true)
+    check('...one cell apart', sawExact('X:44'), true)
+    c.cd_dials = false
+
+    c.compact_rows = 2
+    c.cd_hide_ready = true
+    frame('ja compact: two rows, Repair counting')
+    check('two rows: the row is there too', countExact('DUMMY:3:0'), 1)
+    check('...naming it', sawExact('Repair'), true)
+    -- Nine listed with hide when ready off. A names cell is 16 + 3 + 20 + 4 +
+    -- 20 = 63 wide with 12 between, and the strip's right edge is the bars':
+    -- their x plus 2 x (20 + 4 + 44) + 10 = 146.
+    c.cd_hide_ready = false
+    frame('ja compact: two rows, all nine')
+    local xb = xBefore('HP') or 0
+    local cols = math.floor((xb + 146 - 17 + 12) / 75)
+    check('precondition: the nine take more than one line', cols > 1 and cols < 9, true)
+    check('a line holds what the strip is wide enough for',
+          sawExact('X:' .. tostring(17 + (cols - 1) * 75)), true)
+    check('...and no more', sawExact('X:' .. tostring(17 + cols * 75)), false)
+    check('...each line begun by the rail\'s slot', countExact('DUMMY:3:0'), math.ceil(9 / cols))
+
+    c.compact, c.compact_rows, c.cd_hide_ready = false, 1, false
+    api.saveSettings()
+    petIn()
+    world.abilities, world.recast = {}, {}
+end

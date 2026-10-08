@@ -27,9 +27,11 @@ prediction did *not* match the server, so the model can be corrected from real p
 - **Recast clocks.** Live timers for the automaton's abilities and its ranged shot, and
   under the maneuver table, headed `you`, your own job abilities' recasts, read straight
   from the client, each on a dial that sweeps down as it runs: Activate, Deus Ex
-  Automata, Repair, Maneuver, Role Reversal, Ventriloquy, Overdrive and the rest. Each
-  one has a switch (Retrieve and Deactivate start off), and **hide when ready** leaves a
-  ready one out (Settings tab, **display**).
+  Automata, Repair, Maneuver, Role Reversal, Ventriloquy, Overdrive and the rest. The
+  compact strip lists them too, under itself. Each one has a switch (Retrieve and
+  Deactivate start off), **hide when ready** leaves a ready one out, and **as dials**
+  draws each as a dial alone, the time on it and a short name under it, instead of the
+  dial, the name and the time (Settings tab, **display**).
 - **Loadout tab.** Head, frame and every attachment with its live modifier values, plus
   capacity per element. Saved attachment sets with a preview and a confirmed apply,
   paced a second a step as pupsets is.

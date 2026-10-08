@@ -10,26 +10,28 @@ local safe, player = U.safe, U.player
 
 -- The PUP job abilities, in the order the column lists them: bringing the
 -- automaton back, keeping it alive, the next maneuver, the tank tools, then
--- the ten-second housekeeping and the two-hour. `ability` is LSB's abilityId,
--- `timer` its recastId (sql/abilities.sql), which is the id the server puts in
--- the client's recast table. Each is listed while config['cd_' .. key] is on.
--- Tactical Switch, Cooldown and Heady Artifice are past the level cap.
+-- the ten-second housekeeping and the two-hour. `short` is the name under a
+-- dial (DEA is the usual shorthand for Deus Ex, so Deactivate is Dct).
+-- `ability` is LSB's abilityId, `timer` its recastId (sql/abilities.sql),
+-- which is the id the server puts in the client's recast table. Each is
+-- listed while config['cd_' .. key] is on. Tactical Switch, Cooldown and
+-- Heady Artifice are past the level cap.
 tm.jaList = {
-    { key = 'activate',      label = 'Activate',   name = 'Activate',         ability = 136, timer = 205 },
-    { key = 'dea',           label = 'Deus Ex',    name = 'Deus Ex Automata', ability = 310, timer = 115 },
-    { key = 'repair',        label = 'Repair',     name = 'Repair',           ability = 137, timer = 206 },
+    { key = 'activate',      label = 'Activate',   short = 'Act', name = 'Activate',         ability = 136, timer = 205 },
+    { key = 'dea',           label = 'Deus Ex',    short = 'DEA', name = 'Deus Ex Automata', ability = 310, timer = 115 },
+    { key = 'repair',        label = 'Repair',     short = 'Rep', name = 'Repair',           ability = 137, timer = 206 },
     -- LSB tags it ABYSSEA; HasAbility says whether this server grants it
-    { key = 'maintenance',   label = 'Maint.',     name = 'Maintenance',      ability = 322, timer = 214 },
+    { key = 'maintenance',   label = 'Maint.',     short = 'Mnt', name = 'Maintenance',      ability = 322, timer = 214 },
     -- all eight maneuvers share timer 210, so one row; Fire Maneuver stands in
     -- for the eight when asking whether you have them
-    { key = 'maneuver',      label = 'Maneuver',   name = 'Maneuver',         ability = 141, timer = 210 },
-    { key = 'role_reversal', label = 'Reversal',   name = 'Role Reversal',    ability = 179, timer = 211 },
-    { key = 'ventriloquy',   label = 'Ventrilo',   name = 'Ventriloquy',      ability = 180, timer = 212 },
-    { key = 'deploy',        label = 'Deploy',     name = 'Deploy',           ability = 138, timer = 207 },
-    { key = 'retrieve',      label = 'Retrieve',   name = 'Retrieve',         ability = 140, timer = 209 },
-    { key = 'deactivate',    label = 'Deactivate', name = 'Deactivate',       ability = 139, timer = 208 },
+    { key = 'maneuver',      label = 'Maneuver',   short = 'Man', name = 'Maneuver',         ability = 141, timer = 210 },
+    { key = 'role_reversal', label = 'Reversal',   short = 'RR',  name = 'Role Reversal',    ability = 179, timer = 211 },
+    { key = 'ventriloquy',   label = 'Ventrilo',   short = 'Ven', name = 'Ventriloquy',      ability = 180, timer = 212 },
+    { key = 'deploy',        label = 'Deploy',     short = 'Dep', name = 'Deploy',           ability = 138, timer = 207 },
+    { key = 'retrieve',      label = 'Retrieve',   short = 'Ret', name = 'Retrieve',         ability = 140, timer = 209 },
+    { key = 'deactivate',    label = 'Deactivate', short = 'Dct', name = 'Deactivate',       ability = 139, timer = 208 },
     -- the two-hour: slot 0 of the recast table, whose timer id is 0
-    { key = 'overdrive',     label = 'Overdrive',  name = 'Overdrive',        ability = 135, timer = 0 },
+    { key = 'overdrive',     label = 'Overdrive',  short = 'OD',  name = 'Overdrive',        ability = 135, timer = 0 },
 }
 
 -- HasAbility takes the resource id, which for a job ability is 0x200 on top of
@@ -93,7 +95,7 @@ tm.jaRefresh = function()
             local rem = left[ja.timer]
             if config['cd_' .. ja.key] and learned(d, p, ja)
                and (rem ~= nil or not config.cd_hide_ready) then
-                rows[#rows + 1] = { key = ja.key, label = ja.label, name = ja.name,
+                rows[#rows + 1] = { key = ja.key, label = ja.label, short = ja.short, name = ja.name,
                                     state = (rem ~= nil) and 'counting' or 'ready',
                                     remaining = rem, total = total[ja.timer] }
             end

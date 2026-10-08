@@ -152,6 +152,9 @@ local config =
     -- Retrieve and Deactivate ship off. The Settings tab's ability cooldowns
     -- block sets all twelve.
     cd_hide_ready    = false,
+    -- Each as a dial alone - the time on it, a short name under it - rather than
+    -- a dial, the name and the time. The Status tab and the compact strip both.
+    cd_dials         = false,
     cd_activate      = true,
     cd_dea           = true,
     cd_repair        = true,
