@@ -136,6 +136,14 @@ do
     check('Armor Plate IV element', el4, 'Earth')
     check('Armor Plate IV effect', eff4, 'PDT -40%')
 
+    -- Mana Tank's Refresh is its flat number alone: a big MP pool, which
+    -- LSB's formula would add a share of, must not move it.
+    send044({ head = 5, frame = 35, mp = 1083, maxmp = 1083 })
+    local _, _, mt = api.attachEffect('Mana Tank', { Dark = 1 }, {})
+    check('Mana Tank refresh is flat', mt, 'Refresh +1  Max MP +5%')
+    local _, _, mt2 = api.attachEffect('Mana Tank II', { Dark = 2 }, {})
+    check('Mana Tank II refresh is flat', mt2, 'Refresh +3  Max MP +10%')
+
     local ids = api.itemIds()
     check('id head', ids.head['Valoredge Head'], 2)
     check('id frame', ids.frame['Harlequin Frame'], 32)

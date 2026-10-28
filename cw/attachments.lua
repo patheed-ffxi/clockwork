@@ -258,15 +258,17 @@ local ATTACH_ELEM =
 --   value = base[n+1] + pool * (pct[n+1] / 100)
 -- where pool is the automaton's max HP for Regen (Auto-Repair Kit) and its max
 -- MP for Refresh (Mana Tank), both from the 0x044; the result takes the Optic
--- Fiber boost.
+-- Fiber boost. Horizon grants Mana Tank and Mana Tank II the base alone, with
+-- no share of max MP, so their pct is zero; III and IV, which Horizon has not
+-- released, keep LSB's.
 local REGEN_FORMULA =
 {
     ['Auto-Repair Kit']     = { 'Regen',   { 0, 1, 2, 3 },    { 0, 0.125, 0.225, 0.375 } },
     ['Auto-Repair Kit II']  = { 'Regen',   { 0, 3, 6, 9 },    { 0, 0.6, 1.2, 1.8 } },
     ['Auto-Repair Kit III'] = { 'Regen',   { 0, 9, 12, 15 },  { 0, 1.8, 2.4, 3.0 } },
     ['Auto-Repair Kit IV']  = { 'Regen',   { 0, 15, 18, 21 }, { 0, 3.0, 3.6, 4.2 } },
-    ['Mana Tank']           = { 'Refresh', { 0, 1, 2, 3 },    { 0, 0.2, 0.4, 0.6 } },
-    ['Mana Tank II']        = { 'Refresh', { 0, 2, 3, 4 },    { 0, 0.4, 0.6, 0.8 } },
+    ['Mana Tank']           = { 'Refresh', { 0, 1, 2, 3 },    { 0, 0, 0, 0 } },
+    ['Mana Tank II']        = { 'Refresh', { 0, 2, 3, 4 },    { 0, 0, 0, 0 } },
     ['Mana Tank III']       = { 'Refresh', { 0, 3, 4, 5 },    { 0, 0.6, 0.8, 1.0 } },
     ['Mana Tank IV']        = { 'Refresh', { 0, 4, 5, 6 },    { 0, 0.8, 1.0, 1.2 } },
 }
